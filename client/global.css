@@ -1,0 +1,232 @@
+@import 'tailwindcss';
+@import 'uniwind';
+@import './heroui/styles';
+
+@theme {
+  /* Primitive Colors */
+  --white: #FFFFFF;
+  --black: #000000;
+  --snow: #FFFFFF;
+  --eclipse: #1E2933;
+
+  /* Border */
+  --border-width: 1px;
+  --field-border-width: 0px;
+
+  /* Base radius */
+  --radius: 0.5rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --field-radius: calc(var(--radius) * 1.5);
+
+  /* Opacity */
+  --opacity-disabled: 0.5;
+}
+
+@layer theme {
+  :root {
+    @variant light {
+      /* Base Colors - Health & Warm Theme */
+      --background: #F7F4ED;
+      --foreground: #1E2933;
+
+      /* Surface: Cards, containers */
+      --surface: #FFFFFF;
+      --surface-foreground: #1E2933;
+
+      /* Overlay: Dialogs, popovers */
+      --overlay: #FFFFFF;
+      --overlay-foreground: #1E2933;
+
+      --muted: #6B7280;
+
+      --default: #F0EDE6;
+      --default-foreground: #1E2933;
+
+      /* Primary - Action Orange */
+      --accent: #F26B3A;
+      --accent-foreground: #FFFFFF;
+
+      /* Form Fields */
+      --field-background: #F7F4ED;
+      --field-foreground: #1E2933;
+      --field-placeholder: #9CA3AF;
+      --field-border: transparent;
+
+      /* Status Colors */
+      --success: #3C8D6E;
+      --success-foreground: #FFFFFF;
+
+      --warning: #F59E0B;
+      --warning-foreground: #FFFFFF;
+
+      --danger: #EF4444;
+      --danger-foreground: #FFFFFF;
+
+      /* Component Colors */
+      --segment: #FFFFFF;
+      --segment-foreground: #1E2933;
+
+      /* Misc Colors */
+      --border: #E4DED2;
+      --separator: #E4DED2;
+      --focus: #F26B3A;
+      --link: #1E2933;
+
+      /* Shadows - Soft shadows for cards */
+      --surface-shadow:
+        0 2px 8px 0 rgba(31, 41, 55, 0.06),
+        0 1px 3px 0 rgba(31, 41, 55, 0.08);
+      --overlay-shadow:
+        0 4px 16px 0 rgba(31, 41, 55, 0.12),
+        0 2px 6px 0 rgba(31, 41, 55, 0.08);
+      --field-shadow:
+        0 1px 2px 0 rgba(31, 41, 55, 0.05);
+    }
+
+    @variant dark {
+      /* Base Colors */
+      --background: #1a1a1a;
+      --foreground: #F7F4ED;
+
+      /* Surface */
+      --surface: #262626;
+      --surface-foreground: #F7F4ED;
+
+      /* Overlay */
+      --overlay: #333333;
+      --overlay-foreground: #F7F4ED;
+
+      --muted: #9CA3AF;
+
+      --default: #333333;
+      --default-foreground: #F7F4ED;
+
+      --accent: #F26B3A;
+      --accent-foreground: #FFFFFF;
+
+      /* Form Field Defaults */
+      --field-background: #333333;
+      --field-foreground: #F7F4ED;
+      --field-placeholder: #6B7280;
+      --field-border: transparent;
+
+      /* Status Colors */
+      --success: #3C8D6E;
+      --success-foreground: #FFFFFF;
+
+      --warning: #F59E0B;
+      --warning-foreground: #1E2933;
+
+      --danger: #EF4444;
+      --danger-foreground: #FFFFFF;
+
+      /* Component Colors */
+      --segment: #333333;
+      --segment-foreground: #F7F4ED;
+
+      /* Misc Colors */
+      --border: #404040;
+      --separator: #404040;
+      --focus: #F26B3A;
+      --link: #F7F4ED;
+
+      /* Shadows */
+      --surface-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.3);
+      --overlay-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.4);
+      --field-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+    }
+  }
+}
+
+@theme inline static {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-surface-hover: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground) 8%);
+
+  --color-overlay: var(--overlay);
+  --color-overlay-foreground: var(--overlay-foreground);
+
+  --color-muted: var(--muted);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-segment: var(--segment);
+  --color-segment-foreground: var(--segment-foreground);
+
+  --color-border: var(--border);
+  --color-separator: var(--separator);
+  --color-focus: var(--focus);
+  --color-link: var(--link);
+
+  --color-default: var(--default);
+  --color-default-foreground: var(--default-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+
+  /* Form Field Tokens */
+  --color-field: var(--field-background, var(--default));
+  --color-field-foreground: var(--field-foreground, var(--foreground));
+  --color-field-placeholder: var(--field-placeholder, var(--muted));
+  --color-field-border: var(--field-border, var(--border));
+  --radius-field: var(--field-radius, var(--radius-xl));
+  --border-width-field: var(--field-border-width, var(--border-width));
+
+  --shadow-surface: var(--surface-shadow);
+  --shadow-overlay: var(--overlay-shadow);
+  --shadow-field: var(--field-shadow);
+
+  /* Calculated Variables */
+  --color-background-secondary: color-mix(in oklab, var(--background) 96%, var(--foreground) 4%);
+  --color-background-tertiary: color-mix(in oklab, var(--background) 92%, var(--foreground) 8%);
+  --color-background-inverse: var(--foreground);
+
+  --color-default-hover: color-mix(in oklab, var(--default) 96%, var(--default-foreground) 4%);
+  --color-accent-hover: color-mix(in oklab, var(--accent) 90%, var(--accent-foreground) 10%);
+  --color-success-hover: color-mix(in oklab, var(--success) 90%, var(--success-foreground) 10%);
+  --color-warning-hover: color-mix(in oklab, var(--warning) 90%, var(--warning-foreground) 10%);
+  --color-danger-hover: color-mix(in oklab, var(--danger) 90%, var(--danger-foreground) 10%);
+}
+
+/* Custom utilities */
+@layer utilities {
+  /* Primary color classes */
+  .bg-primary { background-color: #F26B3A; }
+  .text-primary { color: #F26B3A; }
+  .border-primary { border-color: #F26B3A; }
+  
+  /* Success/Health color classes */
+  .bg-success { background-color: #3C8D6E; }
+  .text-success { color: #3C8D6E; }
+  .border-success { border-color: #3C8D6E; }
+  
+  /* Warning color classes */
+  .bg-warning { background-color: #F59E0B; }
+  .text-warning { color: #F59E0B; }
+  .border-warning { border-color: #F59E0B; }
+  
+  /* Danger/Error color classes */
+  .bg-danger { background-color: #EF4444; }
+  .text-danger { color: #EF4444; }
+  .border-danger { border-color: #EF4444; }
+  
+  /* Health app specific backgrounds */
+  .bg-warm-cream { background-color: #F7F4ED; }
+  .bg-card { background-color: #FFFFFF; }
+  .bg-container { background-color: #F0EDE6; }
+  
+  /* Text colors */
+  .text-primary-dark { color: #1E2933; }
+  .text-muted-gray { color: #6B7280; }
+}
