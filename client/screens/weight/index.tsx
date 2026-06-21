@@ -227,6 +227,7 @@ export default function WeightPage() {
   };
 
   const weightDiff = profile ? (profile.currentWeight - profile.targetWeight).toFixed(1) : '0';
+  const isGoalAchieved = profile ? profile.currentWeight <= profile.targetWeight : false;
 
   return (
     <Screen backgroundColor="#F7F4ED">
@@ -280,50 +281,55 @@ export default function WeightPage() {
               </View>
             </View>
 
-            {/* 需减重区域 */}
-            <View style={[styles.weightDiffBox, { backgroundColor: 'rgba(244, 63, 94, 0.08)' }]}>
-              <Text style={styles.weightDiffLabel}>需减重</Text>
-              <Text style={styles.weightDiffValue}>{weightDiff} kg</Text>
+            {/* 体重差区域 */}
+            <View style={[styles.weightDiffBox, { backgroundColor: isGoalAchieved ? 'rgba(60, 141, 110, 0.1)' : 'rgba(244, 63, 94, 0.08)' }]}>
+              {isGoalAchieved ? (
+                <Text style={[styles.weightDiffLabel, { color: '#3C8D6E' }]}>恭喜！已达成体重目标！</Text>
+              ) : (
+                <>
+                  <Text style={styles.weightDiffLabel}>需减重</Text>
+                  <Text style={styles.weightDiffValue}>{weightDiff} kg</Text>
+                </>
+              )}
             </View>
           </View>
         </View>
 
-        {/* 每周减重目标卡片 */}
+        {/* 每周减重目标 / 维持体重卡片 */}
         <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-          <View style={styles.card}>
+          <View style={[styles.card, isGoalAchieved && { borderWidth: 1, borderColor: '#3C8D6E' }]}>
             <View style={styles.cardHeader}>
-              <View style={[styles.iconBg, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
-                <FontAwesome6 name="table-list" size={20} color="#8B5CF6" />
+              <View style={[styles.iconBg, { backgroundColor: isGoalAchieved ? 'rgba(60, 141, 110, 0.1)' : 'rgba(139, 92, 246, 0.1)' }]}>
+                <FontAwesome6 name={isGoalAchieved ? 'circle-check' : 'table-list'} size={20} color={isGoalAchieved ? '#3C8D6E' : '#8B5CF6'} />
               </View>
-              <Text style={styles.cardTitle}>每周减重目标</Text>
+              <Text style={styles.cardTitle}>{isGoalAchieved ? '维持体重模式' : '每周减重目标'}</Text>
             </View>
 
-            {weeklyGoalOptions.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.radioOption,
-                  weeklyGoal === option.value && styles.radioOptionSelected
-                ]}
-                onPress={() => handleWeeklyGoalChange(option.value)}
-              >
-                <View style={[
-                  styles.radioCircle,
-                  weeklyGoal === option.value && styles.radioCircleSelected
-                ]}>
-                  {weeklyGoal === option.value && <View style={styles.radioCircleInner} />}
-                </View>
-                <View style={styles.radioContent}>
-                  <Text style={[
-                    styles.radioLabel,
-                    weeklyGoal === option.value && styles.radioLabelSelected
-                  ]}>
-                    {option.label}
-                  </Text>
-                  <Text style={styles.radioDesc}>{option.desc}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            {isGoalAchieved ? (
+              <View style={{ backgroundColor: 'rgba(60, 141, 110, 0.06)', borderRadius: 12, padding: 16 }}>
+                <Text style={{ fontSize: 14, color: '#3C8D6E', lineHeight: 22, textAlign: 'center' }}>
+                  您已达成目标体重！生成的方案将帮助您维持当前体重，保持健康的生活方式。
+                </Text>
+              </View>
+            ) : (
+              weeklyGoalOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[styles.radioOption, weeklyGoal === option.value && styles.radioOptionSelected]}
+                  onPress={() => handleWeeklyGoalChange(option.value)}
+                >
+                  <View style={[styles.radioCircle, weeklyGoal === option.value && styles.radioCircleSelected]}>
+                    {weeklyGoal === option.value && <View style={styles.radioCircleInner} />}
+                  </View>
+                  <View style={styles.radioContent}>
+                    <Text style={[styles.radioLabel, weeklyGoal === option.value && styles.radioLabelSelected]}>
+                      {option.label}
+                    </Text>
+                    <Text style={styles.radioDesc}>{option.desc}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         </View>
 
@@ -388,14 +394,17 @@ export default function WeightPage() {
               </View>
 
               {weightPlan.isGoalAchieved ? (
-                <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                  <FontAwesome6 name="trophy" size={48} color="#FFFFFF" />
-                  <Text style={{ fontSize: 18, fontWeight: '600', color: '#FFFFFF', marginTop: 12 }}>
-                    恭喜！目标已达成
+                <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+                  <Text style={{ fontSize: 48, fontWeight: '700', color: '#FFFFFF', textAlign: 'center' }}>
+                    {weightPlan.dailyCalories}
                   </Text>
-                  <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 8 }}>
-                    保持当前生活方式即可
+                  <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginTop: 4 }}>
+                    千卡/天（维持体重）
                   </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 }}>
+                    <FontAwesome6 name="circle-check" size={14} color="#FFFFFF" />
+                    <Text style={{ fontSize: 13, color: '#FFFFFF', marginLeft: 8 }}>目标已达成，维持当前状态</Text>
+                  </View>
                 </View>
               ) : (
                 <>
@@ -590,12 +599,16 @@ export default function WeightPage() {
         {/* 生成减重方案按钮 */}
         <View style={{ paddingHorizontal: 20, marginBottom: 100 }}>
           <TouchableOpacity
-            style={[styles.generateButton, loading && styles.generateButtonDisabled]}
+            style={[
+              styles.generateButton,
+              isGoalAchieved && { backgroundColor: '#3C8D6E' },
+              loading && styles.generateButtonDisabled,
+            ]}
             onPress={handleGeneratePlan}
             disabled={loading}
           >
             <Text style={styles.generateButtonText}>
-              {loading ? '计算中...' : '生成减重方案'}
+              {loading ? '计算中...' : isGoalAchieved ? '生成维持方案' : '生成减重方案'}
             </Text>
           </TouchableOpacity>
         </View>

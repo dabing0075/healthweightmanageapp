@@ -173,7 +173,7 @@ app.get('/api/v1/user/info', (req, res) => {
 
 // Update user info
 app.put('/api/v1/user/update', (req, res) => {
-  const { nickname, signature, gender, birth_date, height, target_weight, target_waist, reminder_time } = req.body;
+  const { nickname, signature, gender, birth_date, height, target_weight, target_waist, reminder_time, avatar_url } = req.body;
   const fields: Record<string, any> = {};
   if (nickname !== undefined) fields.nickname = nickname;
   if (signature !== undefined) fields.signature = signature;
@@ -183,6 +183,7 @@ app.put('/api/v1/user/update', (req, res) => {
   if (target_weight !== undefined) fields.target_weight = target_weight;
   if (target_waist !== undefined) fields.target_waist = target_waist;
   if (reminder_time !== undefined) fields.reminder_time = reminder_time;
+  if (avatar_url !== undefined) fields.avatar_url = avatar_url;
   const user = localDb.updateUser('1', fields);
   // Also update in-memory
   const memUser = users[0];
@@ -997,7 +998,9 @@ app.post('/api/v1/health/weight-plan', async (req, res) => {
   const tdee = bmr * activityFactor;
 
   const weeklyGoalKg = weeklyGoal || 0.5;
-  const dailyDeficit = (weeklyGoalKg * 7700) / 7;
+  const weightToLose = currentWeight - targetWeight;
+  const isGoalAchieved = weightToLose <= 0;
+  const dailyDeficit = isGoalAchieved ? 0 : (weeklyGoalKg * 7700) / 7;
   const dailyCalories = Math.round(tdee - dailyDeficit);
 
   // 营养配比（蛋白质32%、碳水化合物46%、脂肪22%）
@@ -1017,9 +1020,7 @@ app.post('/api/v1/health/weight-plan', async (req, res) => {
   const water = Math.round(currentWeight * 33);
 
   // 达成目标时间
-  const weightToLose = currentWeight - targetWeight;
   const weeksToGoal = weightToLose > 0 ? Math.ceil(weightToLose / weeklyGoalKg) : 0;
-  const isGoalAchieved = weightToLose <= 0;
 
   res.json({
     code: 200,

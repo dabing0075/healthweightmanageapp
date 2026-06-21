@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert, Image } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
+import * as ImagePicker from 'expo-image-picker';
+import { FontAwesome6 } from '@expo/vector-icons';
 
-const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+const API_BASE = 'http://localhost:9091';
 
 export default function EditProfile() {
   const router = useSafeRouter();
@@ -18,7 +20,31 @@ export default function EditProfile() {
   const [saved, setSaved] = useState(false);
   const [genderModalVisible, setGenderModalVisible] = useState(false);
   const [dateModalVisible, setDateModalVisible] = useState(false);
-  
+  const [avatar, setAvatar] = useState<string>(''); // base64 data URI
+  const [avatarUri, setAvatarUri] = useState<string>(''); // original URI for display
+
+  // Pick avatar image
+  const pickAvatar = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('提示', '需要相册权限才能选择头像');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setAvatarUri(asset.uri);
+      setAvatar(`data:image/jpeg;base64,${asset.base64}`);
+      setSaved(false);
+    }
+  };
+
   // Date picker state
   const [selectedYear, setSelectedYear] = useState(1990);
   const [selectedMonth, setSelectedMonth] = useState(1);
@@ -45,7 +71,11 @@ export default function EditProfile() {
         setGender(data.data.gender === 'male' ? 'male' : 'female');
         setBirthDate(data.data.birth_date || '');
         setHeight(data.data.height ? String(data.data.height) : '');
-        
+        if (data.data.avatar_url) {
+          setAvatar(data.data.avatar_url);
+          setAvatarUri(data.data.avatar_url);
+        }
+
         // Set initial date picker values
         if (data.data.birth_date) {
           const parts = data.data.birth_date.split('-');
@@ -78,6 +108,7 @@ export default function EditProfile() {
           gender,
           birth_date: birthDate,
           height: height ? parseFloat(height) : null,
+          avatar_url: avatar || null,
         }),
       });
       
@@ -148,6 +179,55 @@ export default function EditProfile() {
         </View>
         
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+          {/* Form Card */}
+          {/* Avatar Section */}
+          <View style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 16,
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+            elevation: 2,
+          }}>
+            <Text style={{ fontSize: 14, color: '#666666', marginBottom: 14, alignSelf: 'flex-start' }}>
+              个人头像
+            </Text>
+            <TouchableOpacity onPress={pickAvatar}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={{ width: 100, height: 100, borderRadius: 50 }} />
+              ) : avatar ? (
+                <View style={{
+                  width: 100, height: 100, borderRadius: 50, backgroundColor: '#F26B3A',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <FontAwesome6 name="user" size={44} color="#FFFFFF" />
+                </View>
+              ) : (
+                <View style={{
+                  width: 100, height: 100, borderRadius: 50, backgroundColor: '#F0EDE6',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <FontAwesome6 name="camera" size={28} color="#9CA3AF" />
+                </View>
+              )}
+              <View style={{
+                position: 'absolute', bottom: 0, right: 0,
+                width: 32, height: 32, borderRadius: 16, backgroundColor: '#F26B3A',
+                alignItems: 'center', justifyContent: 'center',
+                borderWidth: 2, borderColor: '#FFFFFF',
+              }}>
+                <FontAwesome6 name="camera" size={12} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 10 }}>
+              点击更换头像
+            </Text>
+          </View>
+
           {/* Form Card */}
           <View style={{
             backgroundColor: '#FFFFFF',

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Image,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/Screen';
@@ -16,6 +17,7 @@ interface UserProfile {
   id: string;
   nickname: string;
   avatar?: string;
+  avatar_url?: string;
   signature?: string;
   gender: 'male' | 'female';
   birthDate: string;
@@ -72,6 +74,7 @@ export default function ProfilePage() {
             id: user.id,
             nickname: user.nickname || '逐浪大兵',
             avatar: user.avatar,
+            avatar_url: user.avatar_url || '',
             signature: user.signature || '',
             gender: user.gender || 'male',
             birthDate: user.birth_date || '1990-01-01',
@@ -175,33 +178,24 @@ export default function ProfilePage() {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {/* Avatar with gradient */}
-              <View
+              {/* Avatar */}
+              <TouchableOpacity
                 style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
-                  backgroundColor: '#D4A574',
-                  justifyContent: 'center',
-                  alignItems: 'center',
+                  width: 64, height: 64, borderRadius: 32,
+                  backgroundColor: '#8B7355',
+                  justifyContent: 'center', alignItems: 'center',
                   overflow: 'hidden',
                 }}
+                onPress={() => router.push('/edit-profile')}
               >
-                <View
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: 32,
-                    backgroundColor: '#8B7355',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
+                {profile?.avatar_url ? (
+                  <Image source={{ uri: profile.avatar_url }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+                ) : (
                   <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF' }}>
                     {getInitial(profile?.nickname || '逐')}
                   </Text>
-                </View>
-              </View>
+                )}
+              </TouchableOpacity>
 
               {/* User Info */}
               <View style={{ marginLeft: 16, flex: 1 }}>

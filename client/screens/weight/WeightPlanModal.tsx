@@ -324,12 +324,24 @@ export default function WeightPlanModal({ visible, onClose, weightPlan, profile 
             <View style={styles.section}>
               <SectionTitle icon="clipboard-list" text="方案概览" />
               <View style={styles.overviewCard}>
-                <View style={styles.overviewBadge}>
-                  <FontAwesome6 name="calendar-week" size={12} color="#FFFFFF" />
-                  <Text style={styles.overviewBadgeText}>
-                    预计 {weightPlan.weeksToGoal || 0} 周达成
-                  </Text>
-                </View>
+                {weightPlan.isGoalAchieved ? (
+                  <View style={[styles.overviewBadge, { backgroundColor: C.success }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <FontAwesome6 name="circle-check" size={14} color="#FFFFFF" />
+                      <Text style={styles.overviewBadgeText}>恭喜！您已达成目标体重！</Text>
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#FFFFFF', marginTop: 4, opacity: 0.9 }}>
+                      当前热量摄入按照体重标准计算，保持健康生活方式。
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.overviewBadge}>
+                    <FontAwesome6 name="calendar-week" size={12} color="#FFFFFF" />
+                    <Text style={styles.overviewBadgeText}>
+                      预计 {weightPlan.weeksToGoal || 0} 周达成
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.overviewStats}>
                   <View style={styles.overviewStat}>
                     <Text style={styles.overviewStatValue}>{bc.weight}</Text>
@@ -344,10 +356,10 @@ export default function WeightPlanModal({ visible, onClose, weightPlan, profile 
                   </View>
                   <View style={styles.overviewDivider} />
                   <View style={styles.overviewStat}>
-                    <Text style={[styles.overviewStatValue, { color: C.danger }]}>
-                      {weightToLose}
+                    <Text style={[styles.overviewStatValue, { color: weightPlan.isGoalAchieved ? C.success : C.danger }]}>
+                      {weightPlan.isGoalAchieved ? '0' : weightToLose}
                     </Text>
-                    <Text style={styles.overviewStatLabel}>需减(kg)</Text>
+                    <Text style={styles.overviewStatLabel}>{weightPlan.isGoalAchieved ? '达成(kg)' : '需减(kg)'}</Text>
                   </View>
                 </View>
               </View>
@@ -592,7 +604,7 @@ export default function WeightPlanModal({ visible, onClose, weightPlan, profile 
                 <View style={styles.periodDivider} />
                 <View style={styles.periodItem}>
                   <FontAwesome6 name="bucket" size={20} color={C.warning} />
-                  <Text style={styles.periodValue}>{weightPlan.weeklyGoal}</Text>
+                  <Text style={styles.periodValue}>{weightPlan.isGoalAchieved ? '0' : weightPlan.weeklyGoal}</Text>
                   <Text style={styles.periodLabel}>kg/周</Text>
                 </View>
               </View>
