@@ -7,23 +7,24 @@ const slugAppName = projectId ? `app${projectId}` : 'myapp';
 export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
-    "name": appName,
-    "slug": slugAppName,
+    "name": "有靓又健体重日志",
+    "slug": "health-weight-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "healthweight",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.healthweight.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": `com.anonymous.x${projectId || '0'}`
+      "package": "com.healthweight.app"
     },
     "web": {
       "bundler": "metro",
