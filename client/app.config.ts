@@ -9,6 +9,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     "name": "有靓又健体重日志",
     "slug": "health-weight-app",
+    "extra": { "eas": { "projectId": "81be50e4-cdbe-4ab3-972e-d946702cae9e" } },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
