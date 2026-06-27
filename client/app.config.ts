@@ -69,6 +69,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           "microphonePermission": `健康体重管理App需要访问麦克风以录制视频声音。`,
           "recordAudioAndroid": true
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#F26B3A"
+        }
       ]
     ],
     "experiments": {

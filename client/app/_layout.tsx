@@ -1,34 +1,17 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { LogBox, Platform } from 'react-native';
-import { useEffect } from 'react';
+import { LogBox } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { Provider } from '@/components/Provider';
 
 import '../global.css';
 
-// Suppress known warnings
 LogBox.ignoreLogs([
   "TurboModuleRegistry.getEnforcing(...): 'RNMapsAirModule' could not be found",
   'Non-serializable values were found in the navigation state',
 ]);
 
 export default function RootLayout() {
-  useEffect(() => {
-    // Android notification channel — lazy init, won't crash app if it fails
-    if (Platform.OS === 'android') {
-      try {
-        const Notifications = require('expo-notifications');
-        Notifications.setNotificationChannelAsync('default', {
-          name: '打卡提醒',
-          importance: 5, // MAX
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#F26B3A',
-        }).catch(() => {});
-      } catch (_e) { /* ignore */ }
-    }
-  }, []);
-
   return (
     <Provider>
       <StatusBar style="dark" />
