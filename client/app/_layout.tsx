@@ -22,7 +22,6 @@ if (Platform.OS === 'android') {
     lightColor: '#F26B3A',
   }).catch(() => {});
 }
-]);
 
 export default function RootLayout() {
   return (
