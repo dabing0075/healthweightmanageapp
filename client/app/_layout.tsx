@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LogBox, Platform } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { Provider } from '@/components/Provider';
+import * as Notifications from 'expo-notifications';
 
 import '../global.css';
 
@@ -14,21 +15,14 @@ LogBox.ignoreLogs([
 
 // Android notification channel setup (prevents crash on notification API calls)
 if (Platform.OS === 'android') {
-  try {
-    const { Notifications } = require('expo-notifications');
-    Notifications.setNotificationChannelAsync('default', {
-      name: '打卡提醒',
-      importance: 5, // MAX
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#F26B3A',
-    }).catch(() => {});
-  } catch (_e) { /* ignore if notifications module unavailable */ }
+  Notifications.setNotificationChannelAsync('default', {
+    name: '打卡提醒',
+    importance: Notifications.AndroidImportance?.MAX || 5,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#F26B3A',
+  }).catch(() => {});
 }
 ]);
-
-export const unstable_settings = {
-  initialRouteName: 'welcome',
-};
 
 export default function RootLayout() {
   return (
