@@ -13,7 +13,10 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { FontAwesome6 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import * as Notifications from 'expo-notifications';
+
+// 安全获取通知模块（Android 可能不可用）
+let Notifications: any = null;
+try { Notifications = require('expo-notifications'); } catch (_e) { /* not available */ }
 
 export default function EditTargetPage() {
   const router = useSafeRouter();
@@ -33,32 +36,31 @@ export default function EditTargetPage() {
 
   // 请求通知权限
   const requestNotificationPermission = async () => {
-    const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== 'granted') {
-      Toast.show({ type: 'error', text1: '请允许通知权限以接收打卡提醒' });
-      return false;
-    }
-    return true;
+    if (!Notifications) return false;
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      return status === 'granted';
+    } catch (_e) { return false; }
   };
 
   // 设置每日提醒
   const scheduleReminder = async (hour: number, minute: number) => {
-    // 取消所有现有通知
-    await Notifications.cancelAllScheduledNotificationsAsync();
-
-    // 设置每日定时通知
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '打卡提醒',
-        body: '坚持打卡，记录今天的体重和腰围数据吧！',
-        sound: true,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour,
-        minute,
-      },
-    });
+    if (!Notifications) return;
+    try {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '打卡提醒',
+          body: '坚持打卡，记录今天的体重和腰围数据吧！',
+          sound: true,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour,
+          minute,
+        },
+      });
+    } catch (_e) { /* ignore */ }
   };
 
   useFocusEffect(
@@ -138,8 +140,8 @@ export default function EditTargetPage() {
             if (granted) {
               await scheduleReminder(reminderTime.getHours(), reminderTime.getMinutes());
             }
-          } else {
-            await Notifications.cancelAllScheduledNotificationsAsync();
+          } else if (Notifications) {
+            try { await Notifications.cancelAllScheduledNotificationsAsync(); } catch (_e) {}
           }
         } catch (notifErr) {
           console.log('Notification setup skipped (may not be supported on this platform):', notifErr);

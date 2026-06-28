@@ -16,6 +16,7 @@ export default function RootLayout() {
     <Provider>
       <StatusBar style="dark" />
       <Stack
+        initialRouteName="welcome"
         screenOptions={{
           animation: 'slide_from_right',
           gestureEnabled: true,
