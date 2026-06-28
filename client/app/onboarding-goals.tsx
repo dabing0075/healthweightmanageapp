@@ -7,6 +7,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { FontAwesome6 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeToFixed } from '@/utils/api';
 
 export default function OnboardingGoalsPage() {
   const router = useSafeRouter();
@@ -47,7 +48,7 @@ export default function OnboardingGoalsPage() {
     }
 
     try {
-      const API_BASE = 'http://localhost:9091';
+      const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
       await fetch(`${API_BASE}/api/v1/user/update`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -116,9 +117,9 @@ export default function OnboardingGoalsPage() {
           {targetWeight && !isNaN(weightLoss) && (
             <Text style={[styles.hint, { color: weightLoss > 0 ? '#3C8D6E' : '#F26B3A' }]}>
               {weightLoss > 0
-                ? `目标达成后需减重 ${weightLoss.toFixed(1)} kg`
+                ? `目标达成后需减重 ${safeToFixed(weightLoss)} kg`
                 : weightLoss < 0
-                ? `目标达成后需增重 ${Math.abs(weightLoss).toFixed(1)} kg`
+                ? `目标达成后需增重 ${safeToFixed(Math.abs(weightLoss))} kg`
                 : '当前体重已达目标'}
             </Text>
           )}

@@ -13,6 +13,7 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import Toast from 'react-native-toast-message';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { safeToFixed } from '@/utils/api';
 
 const { width } = Dimensions.get('window');
 
@@ -88,7 +89,7 @@ export default function HomePage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotif, setSelectedNotif] = useState<any>(null);
 
-  const API_BASE = 'http://localhost:9091';
+  const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
   const loadData = async () => {
     try {
@@ -124,12 +125,8 @@ export default function HomePage() {
         if (countData.code === 200) setUnreadCount(countData.data?.count || 0);
       } catch (_e) { /* ignore */ }
     } catch (error) {
-      console.error('Load data error:', error);
-      Toast.show({
-        type: 'error',
-        text1: '加载失败',
-        text2: '请检查网络连接',
-      });
+      console.warn('Load data error (network may be unavailable):', (error as Error)?.message);
+      // 不弹出 Toast，避免在没有网络的情况下反复提示用户
     }
   };
 
@@ -281,7 +278,7 @@ export default function HomePage() {
                     <Text style={{ fontSize: 17, fontWeight: '600', color: '#1E2933' }}>消息通知</Text>
                     {unreadCount > 0 && (
                       <TouchableOpacity onPress={async () => {
-                        await fetch(`${API_BASE}/api/v1/notifications/read-all`, { method: 'PUT' });
+                        try { await fetch(`${API_BASE}/api/v1/notifications/read-all`, { method: 'PUT' }); } catch {}
                         setUnreadCount(0);
                         setNotifications(notifications.map((n: any) => ({ ...n, is_read: 1 })));
                       }}>
@@ -305,7 +302,7 @@ export default function HomePage() {
                           }}
                           onPress={async () => {
                             if (!n.is_read) {
-                              await fetch(`${API_BASE}/api/v1/notifications/${n.id}/read`, { method: 'PUT' });
+                              try { await fetch(`${API_BASE}/api/v1/notifications/${n.id}/read`, { method: 'PUT' }); } catch {}
                               setUnreadCount(Math.max(0, unreadCount - 1));
                               setNotifications(notifications.map((x: any) => x.id === n.id ? { ...x, is_read: 1 } : x));
                             }
@@ -441,13 +438,13 @@ export default function HomePage() {
                   <Text style={{ fontSize: 14, color: '#6B7280', marginLeft: 10 }}>体重</Text>
                 </View>
                 <Text style={{ fontSize: 26, fontWeight: '700', color: '#1E2933' }}>
-                  {metrics?.currentWeight?.toFixed(1) || '0.0'}
+                  {safeToFixed(metrics?.currentWeight)}
                   <Text style={{ fontSize: 14, fontWeight: '400' }}> kg</Text>
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
                   <Text style={{ fontSize: 12, color: '#6B7280' }}>目标{userInfo?.target_weight || 0}kg</Text>
                   <Text style={{ fontSize: 12, color: '#F26B3A', marginLeft: 6 }}>
-                    差{metrics?.weightDiff?.toFixed(1) || '0.0'}kg
+                    差{safeToFixed(metrics?.weightDiff)}kg
                   </Text>
                 </View>
               </View>
@@ -482,7 +479,7 @@ export default function HomePage() {
                   <Text style={{ fontSize: 14, color: '#6B7280', marginLeft: 10 }}>腰围</Text>
                 </View>
                 <Text style={{ fontSize: 26, fontWeight: '700', color: '#1E2933' }}>
-                  {metrics?.currentWaist?.toFixed(1) || '0.0'}
+                  {safeToFixed(metrics?.currentWaist)}
                   <Text style={{ fontSize: 14, fontWeight: '400' }}> cm</Text>
                 </Text>
                 <View
@@ -534,7 +531,7 @@ export default function HomePage() {
                   <Text style={{ fontSize: 14, color: '#6B7280', marginLeft: 10 }}>BMI</Text>
                 </View>
                 <Text style={{ fontSize: 26, fontWeight: '700', color: '#1E2933' }}>
-                  {metrics?.bmi?.toFixed(1) || '0.0'}
+                  {safeToFixed(metrics?.bmi)}
                 </Text>
                 <View
                   style={{
@@ -582,7 +579,7 @@ export default function HomePage() {
                   <Text style={{ fontSize: 14, color: '#6B7280', marginLeft: 10 }}>体脂率</Text>
                 </View>
                 <Text style={{ fontSize: 26, fontWeight: '700', color: '#1E2933' }}>
-                  {metrics?.bodyFatRate?.toFixed(1) || '0.0'}
+                  {safeToFixed(metrics?.bodyFatRate)}
                   <Text style={{ fontSize: 14, fontWeight: '400' }}>%</Text>
                 </Text>
                 <View
@@ -803,7 +800,7 @@ export default function HomePage() {
                 }}
               >
                 <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>
-                  {metrics?.currentWeight?.toFixed(1) || '0.0'}kg
+                  {safeToFixed(metrics?.currentWeight)}kg
                 </Text>
               </View>
             </View>

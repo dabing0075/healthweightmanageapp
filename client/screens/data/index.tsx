@@ -11,6 +11,7 @@ import { useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
+import { safeToFixed, safeNumber } from '@/utils/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -73,7 +74,7 @@ export default function DataPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
   const [refreshing, setRefreshing] = useState(false);
 
-  const API_BASE = 'http://localhost:9091';
+  const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
   const fetchData = async () => {
     try {
@@ -89,7 +90,7 @@ export default function DataPage() {
       if (metricsData.code === 200) setMetrics(metricsData.data || null);
       if (userData.code === 200) setUserProfile(userData.data || null);
     } catch (error) {
-      console.error('Fetch data error:', error);
+      console.warn('Fetch data error (network may be unavailable):', (error as Error)?.message);
     }
   };
 
@@ -174,13 +175,13 @@ export default function DataPage() {
   const bodyComponents = useMemo(() => {
     if (!metrics) return null;
     return {
-      fatMass: (metrics.fatMass || 0).toFixed(1),
-      leanMass: (metrics.leanBodyMass || 0).toFixed(1),
-      waterMass: (metrics.waterWeight || 0).toFixed(1),
-      proteinMass: (metrics.proteinMass || 0).toFixed(1),
-      muscleMass: (metrics.skeletalMuscle || 0).toFixed(1),
-      boneMass: (metrics.boneMass || 0).toFixed(1),
-      visceralFatLevel: metrics.vfiLevel || 0,
+      fatMass: safeToFixed(metrics.fatMass),
+      leanMass: safeToFixed(metrics.leanBodyMass),
+      waterMass: safeToFixed(metrics.waterWeight),
+      proteinMass: safeToFixed(metrics.proteinMass),
+      muscleMass: safeToFixed(metrics.skeletalMuscle),
+      boneMass: safeToFixed(metrics.boneMass),
+      visceralFatLevel: safeNumber(metrics.vfiLevel),
     };
   }, [metrics]);
 
@@ -272,7 +273,7 @@ export default function DataPage() {
       const d = c - i;
       if (Math.abs(d) < 0.05) return { change: '-', color: '#666666' };
       const arrow = d > 0 ? '↑' : '↓';
-      const absD = Math.abs(d).toFixed(1);
+      const absD = safeToFixed(Math.abs(d), 1);
       let color = '#666666';
       if (goodDir === 'down') color = d > 0 ? '#EF4444' : '#22C55E';  // 下降好: 增=红, 减=绿
       else if (goodDir === 'up') color = d > 0 ? '#22C55E' : '#EF4444'; // 上升好: 增=绿, 减=红
@@ -285,27 +286,27 @@ export default function DataPage() {
     const idealMuscle = idealW * (isMale ? 0.375 : 0.305);
 
     return [
-      { label: '体重',     initial: earliest.weight.toFixed(1)+' kg', current: latest.weight.toFixed(1)+' kg', change: fd(latest.weight, earliest.weight, 'kg').change, color: fd(latest.weight, earliest.weight, 'kg').color },
-      { label: '腰围',     initial: earliest.waist.toFixed(1)+' cm', current: latest.waist.toFixed(1)+' cm', change: fd(latest.waist, earliest.waist, 'cm').change, color: fd(latest.waist, earliest.waist, 'cm').color },
-      { label: 'BMI',      initial: iBmi.toFixed(1), current: cBmi.toFixed(1), change: fd(cBmi, iBmi, '').change, color: fd(cBmi, iBmi, '').color },
+      { label: '体重',     initial: safeToFixed(earliest.weight)+' kg', current: safeToFixed(latest.weight)+' kg', change: fd(latest.weight, earliest.weight, 'kg').change, color: fd(latest.weight, earliest.weight, 'kg').color },
+      { label: '腰围',     initial: safeToFixed(earliest.waist)+' cm', current: safeToFixed(latest.waist)+' cm', change: fd(latest.waist, earliest.waist, 'cm').change, color: fd(latest.waist, earliest.waist, 'cm').color },
+      { label: 'BMI',      initial: safeToFixed(iBmi), current: safeToFixed(cBmi), change: fd(cBmi, iBmi, '').change, color: fd(cBmi, iBmi, '').color },
       { label: 'BMI等级',  initial: bmiLevel(iBmi), current: metrics?.bmiLevel || bmiLevel(cBmi), change: '-', color: '#666666' },
-      { label: '体脂率',   initial: iBf.toFixed(1)+'%', current: cBf.toFixed(1)+'%', change: fd(cBf, iBf, '%').change, color: fd(cBf, iBf, '%').color },
+      { label: '体脂率',   initial: safeToFixed(iBf)+'%', current: safeToFixed(cBf)+'%', change: fd(cBf, iBf, '%').change, color: fd(cBf, iBf, '%').color },
       { label: '体脂等级', initial: bfLevel(iBf), current: metrics?.bodyFatLevel || bfLevel(cBf), change: '-', color: '#666666' },
-      { label: '脂肪量',   initial: iComp.fatMass.toFixed(1)+' kg', current: cComp.fatMass.toFixed(1)+' kg', change: fd(cComp.fatMass, iComp.fatMass, 'kg').change, color: fd(cComp.fatMass, iComp.fatMass, 'kg').color },
-      { label: '去脂体重', initial: iComp.leanMass.toFixed(1)+' kg', current: cComp.leanMass.toFixed(1)+' kg', change: fd(cComp.leanMass, iComp.leanMass, ' kg', 'down').change, color: fd(cComp.leanMass, iComp.leanMass, ' kg', 'down').color },
-      { label: '水分',     initial: iComp.waterMass.toFixed(1)+' kg', current: cComp.waterMass.toFixed(1)+' kg', change: fd(cComp.waterMass, iComp.waterMass, 'kg', 'neutral').change, color: fd(cComp.waterMass, iComp.waterMass, 'kg', 'neutral').color },
-      { label: '蛋白质',   initial: iComp.proteinMass.toFixed(1)+' kg', current: cComp.proteinMass.toFixed(1)+' kg', change: fd(cComp.proteinMass, iComp.proteinMass, 'kg', 'neutral').change, color: fd(cComp.proteinMass, iComp.proteinMass, 'kg', 'neutral').color },
-      { label: '骨量',     initial: iComp.boneMass.toFixed(1)+' kg', current: cComp.boneMass.toFixed(1)+' kg', change: fd(cComp.boneMass, iComp.boneMass, ' kg', 'up').change, color: fd(cComp.boneMass, iComp.boneMass, ' kg', 'up').color },
-      { label: '软瘦组织', initial: (iComp.leanMass - iComp.boneMass).toFixed(1)+' kg', current: (cComp.leanMass - cComp.boneMass).toFixed(1)+' kg', change: fd(cComp.leanMass - cComp.boneMass, iComp.leanMass - iComp.boneMass, 'kg', 'neutral').change, color: fd(cComp.leanMass - cComp.boneMass, iComp.leanMass - iComp.boneMass, 'kg', 'neutral').color },
-      { label: '骨骼肌',   initial: iComp.muscleMass.toFixed(1)+' kg', current: cComp.muscleMass.toFixed(1)+' kg', change: fd(cComp.muscleMass, iComp.muscleMass, 'kg', 'up').change, color: fd(cComp.muscleMass, iComp.muscleMass, 'kg', 'up').color },
+      { label: '脂肪量',   initial: safeToFixed(iComp.fatMass)+' kg', current: safeToFixed(cComp.fatMass)+' kg', change: fd(cComp.fatMass, iComp.fatMass, 'kg').change, color: fd(cComp.fatMass, iComp.fatMass, 'kg').color },
+      { label: '去脂体重', initial: safeToFixed(iComp.leanMass)+' kg', current: safeToFixed(cComp.leanMass)+' kg', change: fd(cComp.leanMass, iComp.leanMass, ' kg', 'down').change, color: fd(cComp.leanMass, iComp.leanMass, ' kg', 'down').color },
+      { label: '水分',     initial: safeToFixed(iComp.waterMass)+' kg', current: safeToFixed(cComp.waterMass)+' kg', change: fd(cComp.waterMass, iComp.waterMass, 'kg', 'neutral').change, color: fd(cComp.waterMass, iComp.waterMass, 'kg', 'neutral').color },
+      { label: '蛋白质',   initial: safeToFixed(iComp.proteinMass)+' kg', current: safeToFixed(cComp.proteinMass)+' kg', change: fd(cComp.proteinMass, iComp.proteinMass, 'kg', 'neutral').change, color: fd(cComp.proteinMass, iComp.proteinMass, 'kg', 'neutral').color },
+      { label: '骨量',     initial: safeToFixed(iComp.boneMass)+' kg', current: safeToFixed(cComp.boneMass)+' kg', change: fd(cComp.boneMass, iComp.boneMass, ' kg', 'up').change, color: fd(cComp.boneMass, iComp.boneMass, ' kg', 'up').color },
+      { label: '软瘦组织', initial: safeToFixed(iComp.leanMass - iComp.boneMass)+' kg', current: safeToFixed(cComp.leanMass - cComp.boneMass)+' kg', change: fd(cComp.leanMass - cComp.boneMass, iComp.leanMass - iComp.boneMass, 'kg', 'neutral').change, color: fd(cComp.leanMass - cComp.boneMass, iComp.leanMass - iComp.boneMass, 'kg', 'neutral').color },
+      { label: '骨骼肌',   initial: safeToFixed(iComp.muscleMass)+' kg', current: safeToFixed(cComp.muscleMass)+' kg', change: fd(cComp.muscleMass, iComp.muscleMass, 'kg', 'up').change, color: fd(cComp.muscleMass, iComp.muscleMass, 'kg', 'up').color },
       { label: '内脏脂肪', initial: iVfi+' 级', current: cVfi+' 级', change: fd(cVfi, iVfi, ' 级', 'down').change, color: fd(cVfi, iVfi, ' 级', 'down').color },
       { label: '基础代谢率', initial: iBmr+' kcal', current: cBmr+' kcal', change: fd(cBmr, iBmr, ' kcal', 'up').change, color: fd(cBmr, iBmr, ' kcal', 'up').color },
       { label: '肥胖等级',   initial: bmiLevel(iBmi), current: metrics?.bmiLevel || bmiLevel(cBmi), change: '-', color: '#666666' },
       { label: '身体年龄',   initial: iBodyAge+' 岁', current: cBodyAge+' 岁', change: fd(cBodyAge, iBodyAge, ' 岁', 'down').change, color: fd(cBodyAge, iBodyAge, ' 岁', 'down').color },
       { label: '健康评分',   initial: iScore+' 分', current: cScore+' 分', change: fd(cScore, iScore, ' 分', 'up').change, color: fd(cScore, iScore, ' 分', 'up').color },
-      { label: '体重控制',   initial: (idealW - earliest.weight).toFixed(1)+' kg', current: (idealW - latest.weight).toFixed(1)+' kg', change: '-', color: '#666666' },
-      { label: '脂肪控制',   initial: (idealFat - iComp.fatMass).toFixed(1)+' kg', current: (idealFat - cComp.fatMass).toFixed(1)+' kg', change: '-', color: '#666666' },
-      { label: '肌肉控制',   initial: Math.max(0, idealMuscle - iComp.muscleMass).toFixed(1)+' kg', current: Math.max(0, idealMuscle - cComp.muscleMass).toFixed(1)+' kg', change: '-', color: '#666666' },
+      { label: '体重控制',   initial: safeToFixed(idealW - earliest.weight)+' kg', current: safeToFixed(idealW - latest.weight)+' kg', change: '-', color: '#666666' },
+      { label: '脂肪控制',   initial: safeToFixed(idealFat - iComp.fatMass)+' kg', current: safeToFixed(idealFat - cComp.fatMass)+' kg', change: '-', color: '#666666' },
+      { label: '肌肉控制',   initial: safeToFixed(Math.max(0, idealMuscle - iComp.muscleMass))+' kg', current: safeToFixed(Math.max(0, idealMuscle - cComp.muscleMass))+' kg', change: '-', color: '#666666' },
       { label: '体型',       initial: bmiLevel(iBmi), current: metrics?.bodyType || bmiLevel(cBmi), change: '-', color: '#666666' },
     ];
   }, [filteredRecords, metrics, userParams]);
@@ -417,27 +418,27 @@ export default function DataPage() {
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 11, color: '#999999' }}>起始值</Text>
                 <Text style={{ fontSize: 15, fontWeight: '600', color: '#333333', marginTop: 2 }}>
-                  {trendStats.wStart > 0 ? trendStats.wStart.toFixed(1)+' kg' : '--'}
+                  {trendStats.wStart > 0 ? safeToFixed(trendStats.wStart)+' kg' : '--'}
                 </Text>
               </View>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 11, color: '#999999' }}>结束值</Text>
                 <Text style={{ fontSize: 15, fontWeight: '600', color: '#333333', marginTop: 2 }}>
-                  {trendStats.wEnd > 0 ? trendStats.wEnd.toFixed(1)+' kg' : '--'}
+                  {trendStats.wEnd > 0 ? safeToFixed(trendStats.wEnd)+' kg' : '--'}
                 </Text>
               </View>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 11, color: '#999999' }}>变化量</Text>
                 <Text style={{ fontSize: 15, fontWeight: '600', marginTop: 2,
                   color: trendStats.wChg > 0 ? '#EF4444' : trendStats.wChg < 0 ? '#22C55E' : '#666666' }}>
-                  {trendStats.wChg !== 0 ? `${trendStats.wChg > 0 ? '↗' : '↘'} ${Math.abs(trendStats.wChg).toFixed(1)} kg` : '- kg'}
+                  {trendStats.wChg !== 0 ? `${trendStats.wChg > 0 ? '↗' : '↘'} ${safeToFixed(Math.abs(trendStats.wChg), 1)} kg` : '- kg'}
                 </Text>
               </View>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 11, color: '#999999' }}>变化率</Text>
                 <Text style={{ fontSize: 15, fontWeight: '600', marginTop: 2,
                   color: trendStats.wChg > 0 ? '#EF4444' : trendStats.wChg < 0 ? '#22C55E' : '#666666' }}>
-                  {trendStats.wChg !== 0 ? `${trendStats.wRate.toFixed(1)}%` : '-%'}
+                  {trendStats.wChg !== 0 ? `${safeToFixed(trendStats.wRate)}%` : '-%'}
                 </Text>
               </View>
             </View>
@@ -490,27 +491,27 @@ export default function DataPage() {
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 11, color: '#999999' }}>起始值</Text>
                 <Text style={{ fontSize: 15, fontWeight: '600', color: '#333333', marginTop: 2 }}>
-                  {trendStats.wiStart > 0 ? trendStats.wiStart.toFixed(1)+' cm' : '--'}
+                  {trendStats.wiStart > 0 ? safeToFixed(trendStats.wiStart)+' cm' : '--'}
                 </Text>
               </View>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 11, color: '#999999' }}>结束值</Text>
                 <Text style={{ fontSize: 15, fontWeight: '600', color: '#333333', marginTop: 2 }}>
-                  {trendStats.wiEnd > 0 ? trendStats.wiEnd.toFixed(1)+' cm' : '--'}
+                  {trendStats.wiEnd > 0 ? safeToFixed(trendStats.wiEnd)+' cm' : '--'}
                 </Text>
               </View>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 11, color: '#999999' }}>变化量</Text>
                 <Text style={{ fontSize: 15, fontWeight: '600', marginTop: 2,
                   color: trendStats.wiChg > 0 ? '#EF4444' : trendStats.wiChg < 0 ? '#22C55E' : '#666666' }}>
-                  {trendStats.wiChg !== 0 ? `${trendStats.wiChg > 0 ? '↗' : '↘'} ${Math.abs(trendStats.wiChg).toFixed(1)} cm` : '- cm'}
+                  {trendStats.wiChg !== 0 ? `${trendStats.wiChg > 0 ? '↗' : '↘'} ${safeToFixed(Math.abs(trendStats.wiChg), 1)} cm` : '- cm'}
                 </Text>
               </View>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 11, color: '#999999' }}>变化率</Text>
                 <Text style={{ fontSize: 15, fontWeight: '600', marginTop: 2,
                   color: trendStats.wiChg > 0 ? '#EF4444' : trendStats.wiChg < 0 ? '#22C55E' : '#666666' }}>
-                  {trendStats.wiChg !== 0 ? `${trendStats.wiRate.toFixed(1)}%` : '-%'}
+                  {trendStats.wiChg !== 0 ? `${safeToFixed(trendStats.wiRate)}%` : '-%'}
                 </Text>
               </View>
             </View>
@@ -531,7 +532,7 @@ export default function DataPage() {
                 <View style={{ backgroundColor: '#F7F4ED', borderRadius: 12, padding: 14 }}>
                   <Text style={{ fontSize: 12, color: '#999999' }}>平均值</Text>
                   <Text style={{ fontSize: 20, fontWeight: '700', color: '#333333', marginTop: 4 }}>
-                    {stats.avgWeight > 0 ? stats.avgWeight.toFixed(1)+' kg' : '--'}
+                    {stats.avgWeight > 0 ? safeToFixed(stats.avgWeight)+' kg' : '--'}
                   </Text>
                 </View>
               </View>
@@ -539,7 +540,7 @@ export default function DataPage() {
                 <View style={{ backgroundColor: '#F7F4ED', borderRadius: 12, padding: 14 }}>
                   <Text style={{ fontSize: 12, color: '#999999' }}>标准差</Text>
                   <Text style={{ fontSize: 20, fontWeight: '700', color: '#333333', marginTop: 4 }}>
-                    {stats.stdWeight > 0 ? stats.stdWeight.toFixed(1)+' kg' : '--'}
+                    {stats.stdWeight > 0 ? safeToFixed(stats.stdWeight)+' kg' : '--'}
                   </Text>
                 </View>
               </View>
@@ -547,7 +548,7 @@ export default function DataPage() {
                 <View style={{ backgroundColor: '#FFF5F5', borderRadius: 12, padding: 14 }}>
                   <Text style={{ fontSize: 12, color: '#999999' }}>最大值</Text>
                   <Text style={{ fontSize: 20, fontWeight: '700', color: '#E53E3E', marginTop: 4 }}>
-                    {stats.maxWeight > 0 ? stats.maxWeight.toFixed(1)+' kg' : '--'}
+                    {stats.maxWeight > 0 ? safeToFixed(stats.maxWeight)+' kg' : '--'}
                   </Text>
                   <Text style={{ fontSize: 11, color: '#333333', marginTop: 2 }}>{stats.maxWeightDate || '--'}</Text>
                 </View>
@@ -556,7 +557,7 @@ export default function DataPage() {
                 <View style={{ backgroundColor: '#F0FFFC', borderRadius: 12, padding: 14 }}>
                   <Text style={{ fontSize: 12, color: '#999999' }}>最小值</Text>
                   <Text style={{ fontSize: 20, fontWeight: '700', color: '#333333', marginTop: 4 }}>
-                    {stats.minWeight > 0 ? stats.minWeight.toFixed(1)+' kg' : '--'}
+                    {stats.minWeight > 0 ? safeToFixed(stats.minWeight)+' kg' : '--'}
                   </Text>
                   <Text style={{ fontSize: 11, color: '#333333', marginTop: 2 }}>{stats.minWeightDate || '--'}</Text>
                 </View>
@@ -579,7 +580,7 @@ export default function DataPage() {
                 <View style={{ backgroundColor: '#F7F4ED', borderRadius: 12, padding: 14 }}>
                   <Text style={{ fontSize: 12, color: '#999999' }}>平均值</Text>
                   <Text style={{ fontSize: 20, fontWeight: '700', color: '#333333', marginTop: 4 }}>
-                    {stats.avgWaist > 0 ? stats.avgWaist.toFixed(1)+' cm' : '--'}
+                    {stats.avgWaist > 0 ? safeToFixed(stats.avgWaist)+' cm' : '--'}
                   </Text>
                 </View>
               </View>
@@ -587,7 +588,7 @@ export default function DataPage() {
                 <View style={{ backgroundColor: '#F7F4ED', borderRadius: 12, padding: 14 }}>
                   <Text style={{ fontSize: 12, color: '#999999' }}>标准差</Text>
                   <Text style={{ fontSize: 20, fontWeight: '700', color: '#333333', marginTop: 4 }}>
-                    {stats.stdWaist > 0 ? stats.stdWaist.toFixed(1)+' cm' : '--'}
+                    {stats.stdWaist > 0 ? safeToFixed(stats.stdWaist)+' cm' : '--'}
                   </Text>
                 </View>
               </View>
@@ -595,7 +596,7 @@ export default function DataPage() {
                 <View style={{ backgroundColor: '#FFF5F5', borderRadius: 12, padding: 14 }}>
                   <Text style={{ fontSize: 12, color: '#999999' }}>最大值</Text>
                   <Text style={{ fontSize: 20, fontWeight: '700', color: '#E53E3E', marginTop: 4 }}>
-                    {stats.maxWaist > 0 ? stats.maxWaist.toFixed(1)+' cm' : '--'}
+                    {stats.maxWaist > 0 ? safeToFixed(stats.maxWaist)+' cm' : '--'}
                   </Text>
                   <Text style={{ fontSize: 11, color: '#333333', marginTop: 2 }}>{stats.maxWaistDate || '--'}</Text>
                 </View>
@@ -604,7 +605,7 @@ export default function DataPage() {
                 <View style={{ backgroundColor: '#F0FFFC', borderRadius: 12, padding: 14 }}>
                   <Text style={{ fontSize: 12, color: '#999999' }}>最小值</Text>
                   <Text style={{ fontSize: 20, fontWeight: '700', color: '#333333', marginTop: 4 }}>
-                    {stats.minWaist > 0 ? stats.minWaist.toFixed(1)+' cm' : '--'}
+                    {stats.minWaist > 0 ? safeToFixed(stats.minWaist)+' cm' : '--'}
                   </Text>
                   <Text style={{ fontSize: 11, color: '#333333', marginTop: 2 }}>{stats.minWaistDate || '--'}</Text>
                 </View>
@@ -632,7 +633,7 @@ export default function DataPage() {
               </View>
             </View>
             <Text style={{ fontSize: 13, color: '#666666', marginBottom: 12 }}>
-              当前 BMI：<Text style={{ fontSize: 18, fontWeight: '700', color: '#333333' }}>{metrics?.bmi?.toFixed(1) || '--'}</Text>
+              当前 BMI：<Text style={{ fontSize: 18, fontWeight: '700', color: '#333333' }}>{safeToFixed(metrics?.bmi) || '--'}</Text>
             </Text>
             <View style={{ marginBottom: 0 }}>
               <View style={{ height: 24, borderRadius: 12, flexDirection: 'row', overflow: 'hidden' }}>
@@ -657,7 +658,7 @@ export default function DataPage() {
             <View style={{ height: 20, position: 'relative' }}>
               <View style={{ position: 'absolute', left: `${getBMIPosition(metrics?.bmi || 22)}%`, top: -53, transform: [{ translateX: -1 }] }}>
                 <View style={{ width: 2, height: 49, backgroundColor: '#333333', borderRadius: 1 }} />
-                <Text style={{ fontSize: 10, color: '#333333', textAlign: 'center', marginTop: 2 }}>{metrics?.bmi?.toFixed(1) || '--'}</Text>
+                <Text style={{ fontSize: 10, color: '#333333', textAlign: 'center', marginTop: 2 }}>{safeToFixed(metrics?.bmi) || '--'}</Text>
               </View>
             </View>
           </View>
@@ -682,7 +683,7 @@ export default function DataPage() {
               </View>
             </View>
             <Text style={{ fontSize: 13, color: '#666666', marginBottom: 12 }}>
-              当前体脂率：<Text style={{ fontSize: 18, fontWeight: '700', color: '#333333' }}>{metrics?.bodyFatRate?.toFixed(1) || '--'}%</Text>
+              当前体脂率：<Text style={{ fontSize: 18, fontWeight: '700', color: '#333333' }}>{safeToFixed(metrics?.bodyFatRate) || '--'}%</Text>
             </Text>
             <View style={{ marginBottom: 0 }}>
               <View style={{ height: 24, borderRadius: 12, flexDirection: 'row', overflow: 'hidden' }}>
@@ -707,7 +708,7 @@ export default function DataPage() {
             <View style={{ height: 20, position: 'relative' }}>
               <View style={{ position: 'absolute', left: `${getBodyFatPosition(metrics?.bodyFatRate || 20)}%`, top: -53, transform: [{ translateX: -1 }] }}>
                 <View style={{ width: 2, height: 49, backgroundColor: '#333333', borderRadius: 1 }} />
-                <Text style={{ fontSize: 10, color: '#333333', textAlign: 'center', marginTop: 2 }}>{metrics?.bodyFatRate?.toFixed(1) || '--'}%</Text>
+                <Text style={{ fontSize: 10, color: '#333333', textAlign: 'center', marginTop: 2 }}>{safeToFixed(metrics?.bodyFatRate) || '--'}%</Text>
               </View>
             </View>
           </View>
@@ -732,7 +733,7 @@ export default function DataPage() {
               </View>
             </View>
             <Text style={{ fontSize: 13, color: '#666666', marginBottom: 12 }}>
-              当前腰围：<Text style={{ fontSize: 18, fontWeight: '700', color: '#333333' }}>{metrics?.currentWaist?.toFixed(1) || '--'} cm</Text>
+              当前腰围：<Text style={{ fontSize: 18, fontWeight: '700', color: '#333333' }}>{safeToFixed(metrics?.currentWaist) || '--'} cm</Text>
             </Text>
             <View style={{ height: 24, borderRadius: 12, flexDirection: 'row', overflow: 'hidden', marginBottom: 4 }}>
               <View style={{ flex: 40, backgroundColor: '#22C55E', justifyContent: 'center', alignItems: 'center' }}>
@@ -749,7 +750,7 @@ export default function DataPage() {
             <View style={{ height: 20, position: 'relative' }}>
               <View style={{ position: 'absolute', left: `${getWaistPosition(metrics?.currentWaist || 86)}%`, top: -53, transform: [{ translateX: -1 }] }}>
                 <View style={{ width: 2, height: 49, backgroundColor: '#333333', borderRadius: 1 }} />
-                <Text style={{ fontSize: 10, color: '#333333', textAlign: 'center', marginTop: 2 }}>{metrics?.currentWaist?.toFixed(1) || '--'}</Text>
+                <Text style={{ fontSize: 10, color: '#333333', textAlign: 'center', marginTop: 2 }}>{safeToFixed(metrics?.currentWaist) || '--'}</Text>
               </View>
             </View>
           </View>
@@ -792,7 +793,7 @@ export default function DataPage() {
                 <View style={{ backgroundColor: '#F7F4ED', borderRadius: 12, padding: 12 }}>
                   <Text style={{ fontSize: 12, color: '#999999' }}>软瘦组织重量</Text>
                   <Text style={{ fontSize: 18, fontWeight: '700', color: '#22C55E', marginTop: 4 }}>
-                    {(parseFloat(bodyComponents?.leanMass || '0') - parseFloat(bodyComponents?.boneMass || '0')).toFixed(1)} kg
+                    {safeToFixed(safeNumber(bodyComponents?.leanMass) - safeNumber(bodyComponents?.boneMass))} kg
                   </Text>
                   <Text style={{ fontSize: 10, color: '#999999', marginTop: 2 }}>kg = 去脂体重 - 骨量</Text>
                 </View>
@@ -852,13 +853,13 @@ export default function DataPage() {
               </View>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 20, fontWeight: '700', color: trendStats.wChg <= 0 ? '#22C55E' : '#EF4444' }}>
-                  {trendStats.wChg !== 0 ? `${trendStats.wChg > 0 ? '+' : ''}${trendStats.wChg.toFixed(1)} kg` : '- kg'}
+                  {trendStats.wChg !== 0 ? `${trendStats.wChg > 0 ? '+' : ''}${safeToFixed(trendStats.wChg)} kg` : '- kg'}
                 </Text>
                 <Text style={{ fontSize: 11, color: '#999999', marginTop: 2 }}>体重变化</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 20, fontWeight: '700', color: trendStats.wiChg <= 0 ? '#22C55E' : '#EF4444' }}>
-                  {trendStats.wiChg !== 0 ? `${trendStats.wiChg > 0 ? '+' : ''}${trendStats.wiChg.toFixed(1)} cm` : '- cm'}
+                  {trendStats.wiChg !== 0 ? `${trendStats.wiChg > 0 ? '+' : ''}${safeToFixed(trendStats.wiChg)} cm` : '- cm'}
                 </Text>
                 <Text style={{ fontSize: 11, color: '#999999', marginTop: 2 }}>腰围变化</Text>
               </View>

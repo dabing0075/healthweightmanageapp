@@ -47,7 +47,7 @@ export default function OnboardingProfilePage() {
 
     // Save profile to server
     try {
-      const API_BASE = 'http://localhost:9091';
+      const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
       const res = await fetch(`${API_BASE}/api/v1/user/update`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

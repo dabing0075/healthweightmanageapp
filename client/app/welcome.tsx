@@ -13,30 +13,57 @@ export default function WelcomePage() {
   const textFade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let isMounted = true;
+
     // Check if onboarding already completed
-    AsyncStorage.getItem('onboarding_complete').then(value => {
-      if (value === 'true') {
-        // Already onboarded, go directly to main app
-        router.replace('/(tabs)');
-        return;
-      }
+    AsyncStorage.getItem('onboarding_complete')
+      .then(value => {
+        if (!isMounted) return;
+        if (value === 'true') {
+          // Already onboarded, go directly to main app
+          router.replace('/(tabs)');
+          return;
+        }
 
-      // Icon fade in + scale
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
-      ]).start();
+        // Icon fade in + scale
+        Animated.parallel([
+          Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+          Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
+        ]).start();
 
-      // Text fade in after icon
-      setTimeout(() => {
-        Animated.timing(textFade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-      }, 600);
+        // Text fade in after icon
+        setTimeout(() => {
+          if (!isMounted) return;
+          Animated.timing(textFade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+        }, 600);
 
-      // Navigate to login after 3 seconds
-      setTimeout(() => {
-        router.replace('/login');
-      }, 3000);
-    });
+        // Navigate to login after 3 seconds
+        setTimeout(() => {
+          if (!isMounted) return;
+          router.replace('/login');
+        }, 3000);
+      })
+      .catch(() => {
+        // AsyncStorage 读取失败（如首次启动存储未初始化），直接显示动画并跳转登录
+        if (!isMounted) return;
+
+        Animated.parallel([
+          Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+          Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
+        ]).start();
+
+        setTimeout(() => {
+          if (!isMounted) return;
+          Animated.timing(textFade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+        }, 600);
+
+        setTimeout(() => {
+          if (!isMounted) return;
+          router.replace('/login');
+        }, 3000);
+      });
+
+    return () => { isMounted = false; };
   }, []);
 
   return (

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { safeToFixed } from '@/utils/api';
 import { Screen } from '@/components/Screen';
 import { FontAwesome6 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -281,7 +282,7 @@ export default function EditTargetPage() {
                       marginTop: 8,
                     }}
                   >
-                    {weightDiff > 0 ? `需减重 ${weightDiff.toFixed(1)} kg` : `需增重 ${Math.abs(weightDiff).toFixed(1)} kg`}
+                    {weightDiff > 0 ? `需减重 ${safeToFixed(weightDiff)} kg` : `需增重 ${safeToFixed(Math.abs(weightDiff))} kg`}
                   </Text>
                 )}
               </View>
@@ -318,7 +319,7 @@ export default function EditTargetPage() {
                       marginTop: 8,
                     }}
                   >
-                    {waistDiff > 0 ? `需减 ${waistDiff.toFixed(1)} cm` : `需增 ${Math.abs(waistDiff).toFixed(1)} cm`}
+                    {waistDiff > 0 ? `需减 ${safeToFixed(waistDiff)} cm` : `需增 ${safeToFixed(Math.abs(waistDiff))} cm`}
                   </Text>
                 )}
               </View>

@@ -40,7 +40,7 @@ export default function CheckinPage() {
   const [allRecords, setAllRecords] = useState<Record[]>([]);
   const router = useSafeRouter();
 
-  const API_BASE = 'http://localhost:9091';
+  const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
   function getTodayDate() {
     const today = new Date();
@@ -61,7 +61,7 @@ export default function CheckinPage() {
         setTodayCheckedIn(!!todayRecord);
       }
     } catch (error) {
-      console.error('Load recent records error:', error);
+      console.warn('Load recent records error:', (error as Error)?.message);
     }
   };
 
@@ -74,7 +74,7 @@ export default function CheckinPage() {
         setAllRecords(data.data);
       }
     } catch (error) {
-      console.error('Load all records error:', error);
+      console.warn('Load all records error:', (error as Error)?.message);
     }
   };
 
@@ -92,7 +92,7 @@ export default function CheckinPage() {
         setCheckedDates(dates);
       }
     } catch (error) {
-      console.error('Load month records error:', error);
+      console.warn('Load month records error:', (error as Error)?.message);
     }
   };
 
@@ -112,7 +112,7 @@ export default function CheckinPage() {
         setNote('');
       }
     } catch (error) {
-      console.error('Check existing record error:', error);
+      console.warn('Check existing record error:', (error as Error)?.message);
       setWeight('');
       setWaist('');
       setNote('');

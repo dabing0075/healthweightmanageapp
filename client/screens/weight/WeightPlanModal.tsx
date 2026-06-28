@@ -8,6 +8,7 @@ import {
   Modal,
   Dimensions,
 } from 'react-native';
+import { safeToFixed } from '@/utils/api';
 import { FontAwesome6 } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -143,8 +144,8 @@ function CompBar({
         </View>
       </View>
       <View style={styles.compValues}>
-        <Text style={[styles.compCurrent, { color }]}>{current.toFixed(1)}</Text>
-        <Text style={styles.compStandard}>{standard.toFixed(1)}</Text>
+        <Text style={[styles.compCurrent, { color }]}>{safeToFixed(current)}</Text>
+        <Text style={styles.compStandard}>{safeToFixed(standard)}</Text>
       </View>
       <Text style={styles.compUnit}>{unit}</Text>
     </View>
@@ -178,7 +179,7 @@ function MuscleFatBar({
           <View style={[styles.mfSeg, { flex: 35, backgroundColor: '#FCA5A5' }]} />
           <View style={[styles.mfMark, { left: `${pct}%`, backgroundColor: color }]} />
         </View>
-        <Text style={styles.mfValue}>{value.toFixed(1)}{unit}</Text>
+        <Text style={styles.mfValue}>{safeToFixed(value)}{unit}</Text>
       </View>
     </View>
   );
@@ -203,7 +204,7 @@ function ObesityLevelBar({
       <View style={styles.obHeader}>
         <Text style={styles.obLabel}>{label}</Text>
         <Text style={styles.obValue}>
-          {value.toFixed(1)}
+          {safeToFixed(value)}
           <Text style={styles.obUnit}>{unit}</Text>
         </Text>
       </View>
@@ -267,7 +268,7 @@ export default function WeightPlanModal({ visible, onClose, weightPlan, profile 
   const stdSkeletalMuscle = targetMuscleMass;
   const stdLeanMass = idealLean;
 
-  const weightToLose = (bc.weight - targetWeight).toFixed(1);
+  const weightToLose = safeToFixed(bc.weight - targetWeight);
 
   // 评分色
   const scoreColor = (s: number) =>
@@ -497,7 +498,7 @@ export default function WeightPlanModal({ visible, onClose, weightPlan, profile 
                   <View style={styles.controlBoxInner}>
                     <Text style={styles.controlLabel}>体重控制</Text>
                     <Text style={[styles.controlValue, { color: C.primary }]}>
-                      {weightControl > 0 ? `需减 ${Math.abs(weightControl).toFixed(1)} kg` : weightControl < 0 ? `需增 ${Math.abs(weightControl).toFixed(1)} kg` : '维持'}
+                      {weightControl > 0 ? `需减 ${safeToFixed(Math.abs(weightControl), 1)} kg` : weightControl < 0 ? `需增 ${safeToFixed(Math.abs(weightControl), 1)} kg` : '维持'}
                     </Text>
                   </View>
                 </View>
@@ -505,7 +506,7 @@ export default function WeightPlanModal({ visible, onClose, weightPlan, profile 
                   <View style={styles.controlBoxInner}>
                     <Text style={styles.controlLabel}>脂肪控制</Text>
                     <Text style={[styles.controlValue, { color: C.warning }]}>
-                      {fatControl > 0 ? `需减 ${Math.abs(fatControl).toFixed(1)} kg` : fatControl < 0 ? `需增 ${Math.abs(fatControl).toFixed(1)} kg` : '维持'}
+                      {fatControl > 0 ? `需减 ${safeToFixed(Math.abs(fatControl), 1)} kg` : fatControl < 0 ? `需增 ${safeToFixed(Math.abs(fatControl), 1)} kg` : '维持'}
                     </Text>
                   </View>
                 </View>
@@ -513,7 +514,7 @@ export default function WeightPlanModal({ visible, onClose, weightPlan, profile 
                   <View style={styles.controlBoxInner}>
                     <Text style={styles.controlLabel}>肌肉控制</Text>
                     <Text style={[styles.controlValue, { color: C.purple }]}>
-                      {muscleControl > 0 ? `需增 ${Math.abs(muscleControl).toFixed(1)} kg` : muscleControl < 0 ? `需减 ${Math.abs(muscleControl).toFixed(1)} kg` : '维持'}
+                      {muscleControl > 0 ? `需增 ${safeToFixed(Math.abs(muscleControl), 1)} kg` : muscleControl < 0 ? `需减 ${safeToFixed(Math.abs(muscleControl), 1)} kg` : '维持'}
                     </Text>
                   </View>
                 </View>

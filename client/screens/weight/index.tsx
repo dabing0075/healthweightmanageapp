@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { safeToFixed } from '@/utils/api';
 import { Screen } from '@/components/Screen';
 import { FontAwesome6 } from '@expo/vector-icons';
 import WeightPlanModal from './WeightPlanModal';
@@ -115,7 +116,7 @@ export default function WeightPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
 
-  const API_BASE = 'http://localhost:9091';
+  const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
   const fetchProfile = async () => {
     try {
@@ -159,7 +160,7 @@ export default function WeightPage() {
         return newProfile;
       }
     } catch (error) {
-      console.error('Fetch profile error:', error);
+      console.warn('Fetch profile error (network may be unavailable):', (error as Error)?.message);
     }
     return null;
   };
@@ -190,7 +191,7 @@ export default function WeightPage() {
         setWeightPlan(planWithWeights);
       }
     } catch (error) {
-      console.error('Calculate plan error:', error);
+      console.warn('Calculate plan error (network may be unavailable):', (error as Error)?.message);
     } finally {
       setLoading(false);
     }
@@ -226,7 +227,7 @@ export default function WeightPage() {
     setTimeout(calculatePlan, 100);
   };
 
-  const weightDiff = profile ? (profile.currentWeight - profile.targetWeight).toFixed(1) : '0';
+  const weightDiff = profile ? safeToFixed(profile.currentWeight - profile.targetWeight) : '0';
   const isGoalAchieved = profile ? profile.currentWeight <= profile.targetWeight : false;
 
   return (

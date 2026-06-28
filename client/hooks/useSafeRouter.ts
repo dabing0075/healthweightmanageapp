@@ -92,6 +92,9 @@ const deserializeParams = <T = Record<string, unknown>>(
  */
 export function useSafeRouter() {
   const router = useExpoRouter();
+
+  // React Hooks 必须无条件调用，不能在 try-catch 中
+  // 如果路由上下文未就绪，useExpoParams 内部会返回空对象，不会崩溃
   const rawParams = useExpoParams<Record<string, string | string[]>>();
 
   const push = (pathname: string, params: Record<string, unknown> = {}) => {
