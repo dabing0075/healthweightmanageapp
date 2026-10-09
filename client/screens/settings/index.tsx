@@ -5,6 +5,8 @@ import { View, Text, TouchableOpacity, ScrollView, Switch, Alert } from 'react-n
 import { Screen } from '@/components/Screen';
 import { FontAwesome6 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SettingItemProps {
   icon: string;
@@ -56,6 +58,8 @@ const SettingItem: React.FC<SettingItemProps> = ({
 );
 
 export default function SettingsScreen() {
+  const router = useSafeRouter();
+  const { logout } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [sound, setSound] = useState(true);
   const [vibration, setVibration] = useState(true);
@@ -70,11 +74,13 @@ export default function SettingsScreen() {
         {
           text: '确定',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            await logout();
             Toast.show({
               type: 'success',
               text1: '已退出登录',
             });
+            router.replace('/login');
           },
         },
       ]

@@ -13,7 +13,7 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import Toast from 'react-native-toast-message';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
-import { safeToFixed } from '@/utils/api';
+import { safeToFixed, apiFetch } from '@/utils/api';
 
 const { width } = Dimensions.get('window');
 
@@ -89,39 +89,32 @@ export default function HomePage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotif, setSelectedNotif] = useState<any>(null);
 
-  const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
-
   const loadData = async () => {
     try {
       const ts = Date.now(); // cache-busting
       // Get user info
-      const userRes = await fetch(`${API_BASE}/api/v1/user/info?_=${ts}`);
-      const userData = await userRes.json();
+      const userData = await apiFetch(`/api/v1/user/info?_=${ts}`);
       if (userData.code === 200 && userData.data) {
         setUserInfo(userData.data);
       }
 
       // Get health metrics
-      const metricsRes = await fetch(`${API_BASE}/api/v1/health/metrics?_=${ts}`);
-      const metricsData = await metricsRes.json();
+      const metricsData = await apiFetch(`/api/v1/health/metrics?_=${ts}`);
       if (metricsData.code === 200 && metricsData.data) {
         setMetrics(metricsData.data);
       }
 
       // Get trend data
-      const trendRes = await fetch(`${API_BASE}/api/v1/health/trend?days=7&_=${ts}`);
-      const trendData = await trendRes.json();
+      const trendData = await apiFetch(`/api/v1/health/trend?days=7&_=${ts}`);
       if (trendData.code === 200 && trendData.data) {
         setTrendData(trendData.data);
       }
 
       // Get notifications
       try {
-        const notifRes = await fetch(`${API_BASE}/api/v1/notifications?_=${ts}`);
-        const notifData = await notifRes.json();
+        const notifData = await apiFetch(`/api/v1/notifications?_=${ts}`);
         if (notifData.code === 200) setNotifications(notifData.data || []);
-        const countRes = await fetch(`${API_BASE}/api/v1/notifications/unread-count?_=${ts}`);
-        const countData = await countRes.json();
+        const countData = await apiFetch(`/api/v1/notifications/unread-count?_=${ts}`);
         if (countData.code === 200) setUnreadCount(countData.data?.count || 0);
       } catch (_e) { /* ignore */ }
     } catch (error) {
@@ -278,7 +271,7 @@ export default function HomePage() {
                     <Text style={{ fontSize: 17, fontWeight: '600', color: '#1E2933' }}>消息通知</Text>
                     {unreadCount > 0 && (
                       <TouchableOpacity onPress={async () => {
-                        try { await fetch(`${API_BASE}/api/v1/notifications/read-all`, { method: 'PUT' }); } catch {}
+                        try { await apiFetch('/api/v1/notifications/read-all', { method: 'PUT' }); } catch {}
                         setUnreadCount(0);
                         setNotifications(notifications.map((n: any) => ({ ...n, is_read: 1 })));
                       }}>
@@ -302,7 +295,7 @@ export default function HomePage() {
                           }}
                           onPress={async () => {
                             if (!n.is_read) {
-                              try { await fetch(`${API_BASE}/api/v1/notifications/${n.id}/read`, { method: 'PUT' }); } catch {}
+                              try { await apiFetch(`/api/v1/notifications/${n.id}/read`, { method: 'PUT' }); } catch {}
                               setUnreadCount(Math.max(0, unreadCount - 1));
                               setNotifications(notifications.map((x: any) => x.id === n.id ? { ...x, is_read: 1 } : x));
                             }

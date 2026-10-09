@@ -568,7 +568,7 @@ export default function WeightPlanModal({ visible, onClose, weightPlan, profile 
                 <MacroRow icon="bread-slice" color={C.blue} label="碳水化合物" grams={`${macros.carbs}g`} percent={macros.carbsPercent}
                   foods="糙米、燕麦、红薯、全麦面包、荞麦面、玉米、藜麦" />
                 <MacroRow icon="oil-can" color={C.primary} label="健康脂肪" grams={`${macros.fat}g`} percent={macros.fatPercent}
-                  foods="坚果、牛油果、橄榄油、亚麻籽油、深海鱼、奇亚籽" />
+                  foods="坚果、牛油果、橄榄油、菜籽油、亚麻籽油、深海鱼、奇亚籽" />
                 <MacroRow icon="leaf" color={C.success} label="膳食纤维" grams="25-30g" suffix="/天"
                   foods="绿叶蔬菜、西兰花、胡萝卜、苹果、燕麦麸、豆类、菌菇" />
                 <View style={styles.waterRow}>
@@ -620,7 +620,7 @@ export default function WeightPlanModal({ visible, onClose, weightPlan, profile 
                 <AdviceItem icon="fire-flame-curved" color={C.warning} title="热量控制"
                   text={`维持当前体重每日需摄入约 ${weightPlan.tdee} 千卡；减重期间建议每日热量缺口 300-500 千卡，避免过度节食。`} />
                 <AdviceItem icon="oil-can" color={C.purple} title="优质脂肪摄入"
-                  text="选择不饱和脂肪酸来源：坚果、牛油果、橄榄油、亚麻籽油、深海鱼。避免反式脂肪（油炸食品、人造奶油）。" />
+                  text="选择不饱和脂肪酸来源：坚果、牛油果、橄榄油、菜籽油、亚麻籽油、深海鱼。避免反式脂肪（油炸食品、人造奶油）。" />
                 <AdviceItem icon="person-walking" color={C.success} title="规律运动"
                   text={`每周进行 ${weightPlan.weeklyGoal >= 1 ? '5-6' : '3-4'} 次有氧运动（快走、慢跑、游泳、骑行），每次 30-60 分钟；结合力量训练增加肌肉量，提高基础代谢。`} />
                 <AdviceItem icon="clock" color={C.pink} title="充足睡眠"

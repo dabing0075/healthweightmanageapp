@@ -2,12 +2,13 @@ import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { FontAwesome6 } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function WelcomePage() {
   const router = useSafeRouter();
+  const { isAuthenticated, user } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const textFade = useRef(new Animated.Value(0)).current;
@@ -15,56 +16,36 @@ export default function WelcomePage() {
   useEffect(() => {
     let isMounted = true;
 
-    // Check if onboarding already completed
-    AsyncStorage.getItem('onboarding_complete')
-      .then(value => {
-        if (!isMounted) return;
-        if (value === 'true') {
-          // Already onboarded, go directly to main app
-          router.replace('/(tabs)');
-          return;
-        }
+    // 已登录：直接按 onboarding 状态跳转
+    if (isAuthenticated) {
+      if (user?.onboarded === 1) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/onboarding-profile');
+      }
+      return () => { isMounted = false; };
+    }
 
-        // Icon fade in + scale
-        Animated.parallel([
-          Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-          Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
-        ]).start();
+    // 未登录：开场动画后跳登录
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
+    ]).start();
 
-        // Text fade in after icon
-        setTimeout(() => {
-          if (!isMounted) return;
-          Animated.timing(textFade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-        }, 600);
+    // Text fade in after icon
+    setTimeout(() => {
+      if (!isMounted) return;
+      Animated.timing(textFade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+    }, 600);
 
-        // Navigate to login after 3 seconds
-        setTimeout(() => {
-          if (!isMounted) return;
-          router.replace('/login');
-        }, 3000);
-      })
-      .catch(() => {
-        // AsyncStorage 读取失败（如首次启动存储未初始化），直接显示动画并跳转登录
-        if (!isMounted) return;
-
-        Animated.parallel([
-          Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-          Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
-        ]).start();
-
-        setTimeout(() => {
-          if (!isMounted) return;
-          Animated.timing(textFade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-        }, 600);
-
-        setTimeout(() => {
-          if (!isMounted) return;
-          router.replace('/login');
-        }, 3000);
-      });
+    // Navigate to login after 3 seconds
+    setTimeout(() => {
+      if (!isMounted) return;
+      router.replace('/login');
+    }, 3000);
 
     return () => { isMounted = false; };
-  }, []);
+  }, [isAuthenticated, user?.onboarded]);
 
   return (
     <View style={styles.container}>

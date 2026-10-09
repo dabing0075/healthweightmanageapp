@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
-import { safeToFixed } from '@/utils/api';
+import { safeToFixed, apiFetch } from '@/utils/api';
 import { Screen } from '@/components/Screen';
 import { FontAwesome6 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -32,8 +32,6 @@ export default function EditTargetPage() {
   const [reminderTime, setReminderTime] = useState(getDefaultReminder());
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-
-  const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
   // 请求通知权限
   const requestNotificationPermission = async () => {
@@ -72,13 +70,10 @@ export default function EditTargetPage() {
 
   const fetchData = async () => {
     try {
-      const [userRes, metricsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/v1/user/info`),
-        fetch(`${API_BASE}/api/v1/health/metrics`),
+      const [userData, metricsData] = await Promise.all([
+        apiFetch('/api/v1/user/info'),
+        apiFetch('/api/v1/health/metrics'),
       ]);
-
-      const userData = await userRes.json();
-      const metricsData = await metricsRes.json();
 
       if (userData.code === 200 && userData.data) {
         setTargetWeight(userData.data.target_weight?.toString() || '70');
@@ -122,16 +117,14 @@ export default function EditTargetPage() {
         ? `${String(reminderTime.getHours()).padStart(2, '0')}:${String(reminderTime.getMinutes()).padStart(2, '0')}`
         : null;
 
-      const res = await fetch(`${API_BASE}/api/v1/user/update`, {
+      const data = await apiFetch('/api/v1/user/update', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           target_weight: target,
           target_waist: waist,
           reminder_time: timeStr,
-        }),
+        },
       });
-      const data = await res.json();
 
       if (data.code === 200) {
         // 设置通知（Web 端可能不支持，单独捕获异常）

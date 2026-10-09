@@ -13,6 +13,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { FontAwesome6 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { apiFetch } from '@/utils/api';
 
 const { width } = Dimensions.get('window');
 
@@ -40,8 +41,6 @@ export default function CheckinPage() {
   const [allRecords, setAllRecords] = useState<Record[]>([]);
   const router = useSafeRouter();
 
-  const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
-
   function getTodayDate() {
     const today = new Date();
     const year = today.getFullYear();
@@ -53,8 +52,7 @@ export default function CheckinPage() {
   // Load recent records
   const loadRecentRecords = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/records/recent?days=7`);
-      const data = await res.json();
+      const data = await apiFetch('/api/v1/records/recent?days=7');
       if (data.code === 200 && data.data) {
         setRecentRecords(data.data);
         const todayRecord = data.data.find((r: Record) => r.record_date === getTodayDate());
@@ -68,8 +66,7 @@ export default function CheckinPage() {
   // Load all records
   const loadAllRecords = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/records/history?days=36500`);
-      const data = await res.json();
+      const data = await apiFetch('/api/v1/records/history?days=36500');
       if (data.code === 200 && data.data) {
         setAllRecords(data.data);
       }
@@ -85,8 +82,7 @@ export default function CheckinPage() {
       const lastDay = new Date(currentYear, currentMonth, 0).getDate();
       const endDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-      const res = await fetch(`${API_BASE}/api/v1/records/history?startDate=${startDate}&endDate=${endDate}`);
-      const data = await res.json();
+      const data = await apiFetch(`/api/v1/records/history?startDate=${startDate}&endDate=${endDate}`);
       if (data.code === 200 && data.data) {
         const dates = new Set<string>(data.data.map((r: Record) => r.record_date));
         setCheckedDates(dates);
@@ -99,8 +95,7 @@ export default function CheckinPage() {
   // Check existing record for selected date
   const checkExistingRecord = async (date: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/records/date/${date}`);
-      const data = await res.json();
+      const data = await apiFetch(`/api/v1/records/date/${date}`);
       if (data.code === 200 && data.data) {
         const record = data.data;
         setWeight(record.weight?.toString() || '');
@@ -220,17 +215,15 @@ export default function CheckinPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/records`, {
+      const data = await apiFetch('/api/v1/records', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           record_date: selectedDate,
           weight: weightNum,
           waist: waistNum,
           note: note.trim(),
-        }),
+        },
       });
-      const data = await res.json();
 
       if (data.code === 200) {
         Toast.show({

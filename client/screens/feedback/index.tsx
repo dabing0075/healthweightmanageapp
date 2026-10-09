@@ -12,6 +12,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { FontAwesome6 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { apiFetch } from '@/utils/api';
 
 const feedbackTypes = [
   { value: 'function', label: '功能建议', icon: 'lightbulb' },
@@ -26,8 +27,6 @@ export default function FeedbackPage() {
   const [contact, setContact] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
-
   const handleSubmit = async () => {
     if (!content.trim()) {
       Toast.show({ type: 'error', text1: '请输入反馈内容' });
@@ -36,16 +35,14 @@ export default function FeedbackPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/feedback`, {
+      const data = await apiFetch('/api/v1/user/feedback', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           type: feedbackType,
           content: content.trim(),
           contact: contact.trim(),
-        }),
+        },
       });
-      const data = await res.json();
 
       if (data.code === 200) {
         Toast.show({ type: 'success', text1: '反馈已提交', text2: '感谢您的宝贵意见' });

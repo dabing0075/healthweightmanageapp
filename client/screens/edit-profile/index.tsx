@@ -4,8 +4,7 @@ import { Screen } from '@/components/Screen';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import * as ImagePicker from 'expo-image-picker';
 import { FontAwesome6 } from '@expo/vector-icons';
-
-const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+import { apiFetch } from '@/utils/api';
 
 export default function EditProfile() {
   const router = useSafeRouter();
@@ -63,8 +62,7 @@ export default function EditProfile() {
   
   const fetchUserInfo = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/user/info`);
-      const data = await res.json();
+      const data = await apiFetch('/api/v1/user/info');
       if (data.code === 200 && data.data) {
         setNickname(data.data.nickname || '');
         setSignature(data.data.signature || '');
@@ -99,21 +97,18 @@ export default function EditProfile() {
     
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/user/update`, {
+      const data = await apiFetch('/api/v1/user/update', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           nickname,
           signature,
           gender,
           birth_date: birthDate,
           height: height ? parseFloat(height) : null,
           avatar_url: avatar || null,
-        }),
+        },
       });
-      
-      const data = await res.json();
-      
+
       if (data.code === 200) {
         setSaved(true);
         setLoading(false);
@@ -122,7 +117,7 @@ export default function EditProfile() {
           router.back();
         }, 500);
       } else {
-        Alert.alert('错误', data.message || '保存失败');
+        Alert.alert('错误', data.msg || '保存失败');
       }
     } catch (err) {
       Alert.alert('错误', '网络请求失败');

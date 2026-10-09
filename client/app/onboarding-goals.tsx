@@ -7,10 +7,12 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { FontAwesome6 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { safeToFixed } from '@/utils/api';
+import { safeToFixed, apiFetch } from '@/utils/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function OnboardingGoalsPage() {
   const router = useSafeRouter();
+  const { updateUser } = useAuth();
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -48,15 +50,13 @@ export default function OnboardingGoalsPage() {
     }
 
     try {
-      const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
-      await fetch(`${API_BASE}/api/v1/user/update`, {
+      await apiFetch('/api/v1/user/update', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target_weight: tw, target_waist: wi }),
+        body: { target_weight: tw, target_waist: wi, onboarded: 1 },
       });
 
-      // Mark onboarding as complete
-      await AsyncStorage.setItem('onboarding_complete', 'true');
+      // 本地同步 onboarding 状态
+      updateUser({ onboarded: 1 });
 
       Toast.show({ type: 'success', text1: '设置完成！', text2: '欢迎开启健康之旅' });
       setTimeout(() => router.replace('/(tabs)'), 500);

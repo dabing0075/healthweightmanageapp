@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { safeToFixed } from '@/utils/api';
+import { safeToFixed, apiFetch } from '@/utils/api';
 import { Screen } from '@/components/Screen';
 import { FontAwesome6 } from '@expo/vector-icons';
 import WeightPlanModal from './WeightPlanModal';
@@ -116,19 +116,13 @@ export default function WeightPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
 
-  const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
-
   const fetchProfile = async () => {
     try {
-      const [userRes, metricsRes, recordsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/v1/user/info`),
-        fetch(`${API_BASE}/api/v1/health/metrics`),
-        fetch(`${API_BASE}/api/v1/records/stats`),
+      const [userData, metricsData, recordsData] = await Promise.all([
+        apiFetch('/api/v1/user/info'),
+        apiFetch('/api/v1/health/metrics'),
+        apiFetch('/api/v1/records/stats'),
       ]);
-
-      const userData = await userRes.json();
-      const metricsData = await metricsRes.json();
-      const recordsData = await recordsRes.json();
 
       if (userData.code === 200 && userData.data) {
         const user = userData.data;
@@ -168,12 +162,10 @@ export default function WeightPage() {
   const calculatePlan = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/health/weight-plan`, {
+      const data = await apiFetch('/api/v1/health/weight-plan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ weeklyGoal, activityLevel }),
+        body: { weeklyGoal, activityLevel },
       });
-      const data = await res.json();
 
       if (data.code === 200 && data.data) {
         const serverData = data.data;

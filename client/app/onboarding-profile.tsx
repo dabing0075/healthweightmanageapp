@@ -7,6 +7,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { FontAwesome6 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiFetch } from '@/utils/api';
 
 const GENERATED_NICKNAMES = [
   '健康达人', '追风少年', '阳光跑者', '活力满满', '减重勇士',
@@ -47,20 +48,17 @@ export default function OnboardingProfilePage() {
 
     // Save profile to server
     try {
-      const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
-      const res = await fetch(`${API_BASE}/api/v1/user/update`, {
+      const updateRes = await apiFetch('/api/v1/user/update', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, gender, birth_date: birthStr, height: h }),
+        body: { nickname, gender, birth_date: birthStr, height: h },
       });
-      if (!res.ok) throw new Error(`服务器错误: ${res.status}`);
+      if (updateRes.code !== 200) throw new Error(updateRes.msg || `服务器错误: ${updateRes.code}`);
 
       // Also save this weight as first check-in
       const today = new Date().toISOString().split('T')[0];
-      await fetch(`${API_BASE}/api/v1/records`, {
+      await apiFetch('/api/v1/records', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ record_date: today, weight: w, waist: 0, note: '' }),
+        body: { record_date: today, weight: w, waist: 0, note: '' },
       });
 
       // Store onboarding data for next page via AsyncStorage

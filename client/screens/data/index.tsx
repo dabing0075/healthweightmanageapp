@@ -11,7 +11,7 @@ import { useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
-import { safeToFixed, safeNumber } from '@/utils/api';
+import { safeToFixed, safeNumber, apiFetch } from '@/utils/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -74,18 +74,13 @@ export default function DataPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
   const [refreshing, setRefreshing] = useState(false);
 
-  const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
-
   const fetchData = async () => {
     try {
-      const [recordsRes, metricsRes, userRes] = await Promise.all([
-        fetch(`${API_BASE}/api/v1/records/history?days=36500`),
-        fetch(`${API_BASE}/api/v1/health/metrics`),
-        fetch(`${API_BASE}/api/v1/user/info`),
+      const [recordsData, metricsData, userData] = await Promise.all([
+        apiFetch('/api/v1/records/history?days=36500'),
+        apiFetch('/api/v1/health/metrics'),
+        apiFetch('/api/v1/user/info'),
       ]);
-      const recordsData = await recordsRes.json();
-      const metricsData = await metricsRes.json();
-      const userData = await userRes.json();
       if (recordsData.code === 200) setRecords(recordsData.data || []);
       if (metricsData.code === 200) setMetrics(metricsData.data || null);
       if (userData.code === 200) setUserProfile(userData.data || null);

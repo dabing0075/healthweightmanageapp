@@ -28,6 +28,7 @@ function initTables(): void {
   d.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
+      phone TEXT,
       nickname TEXT NOT NULL DEFAULT '',
       signature TEXT NOT NULL DEFAULT '',
       gender TEXT NOT NULL DEFAULT 'male',
@@ -37,12 +38,15 @@ function initTables(): void {
       target_waist REAL NOT NULL DEFAULT 80,
       avatar_url TEXT,
       reminder_time TEXT,
+      onboarded INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
 
-  // Add reminder_time column if it doesn't exist (migration for existing DBs)
-  try { d.exec(`ALTER TABLE users ADD COLUMN reminder_time TEXT`); } catch (_e) { /* column already exists */ }
+  // Idempotent migrations for existing DBs (CREATE TABLE IF NOT EXISTS won't add columns)
+  try { d.exec(`ALTER TABLE users ADD COLUMN phone TEXT`); } catch (_e) { /* column already exists */ }
+  try { d.exec(`ALTER TABLE users ADD COLUMN onboarded INTEGER NOT NULL DEFAULT 0`); } catch (_e) { /* column already exists */ }
+  d.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone ON users(phone)`);
 
   d.exec(`
     CREATE TABLE IF NOT EXISTS checkin_records (
@@ -73,22 +77,26 @@ function initTables(): void {
   `);
   d.exec(`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`);
 
-  // Seed default user if none exists
-  const userCount = d.prepare('SELECT COUNT(*) as count FROM users').get() as any;
-  if (userCount.count === 0) {
-    d.prepare(`INSERT INTO users (id, nickname, signature, gender, birth_date, height, target_weight, target_waist)
-      VALUES ('1', '两点丘', '每天进步一点点', 'male', '1975-11-03', 179, 70, 80)`).run();
-    console.log('[LocalDB] Default user seeded');
-  }
-
   console.log('[LocalDB] SQLite database initialized at', DB_PATH);
 }
 
 // ======== User operations ========
 
-export function getUser(userId: string = '1') {
+export function getUser(userId: string) {
   const d = getDb();
   return d.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+}
+
+export function getUserByPhone(phone: string) {
+  const d = getDb();
+  return d.prepare('SELECT * FROM users WHERE phone = ?').get(phone) as any;
+}
+
+export function createUser(phone: string) {
+  const d = getDb();
+  const id = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  d.prepare(`INSERT INTO users (id, phone) VALUES (?, ?)`).run(id, phone);
+  return getUser(id);
 }
 
 export function updateUser(userId: string, fields: Record<string, any>) {
@@ -102,56 +110,56 @@ export function updateUser(userId: string, fields: Record<string, any>) {
 
 // ======== Records operations ========
 
-export function getAllRecords(): any[] {
+export function getAllRecords(userId: string): any[] {
   const d = getDb();
   const today = new Date().toISOString().split('T')[0];
-  return d.prepare('SELECT * FROM checkin_records WHERE record_date <= ? ORDER BY record_date DESC').all(today);
+  return d.prepare('SELECT * FROM checkin_records WHERE user_id = ? AND record_date <= ? ORDER BY record_date DESC').all(userId, today);
 }
 
-export function getRecordsByDateRange(startDate: string, endDate: string): any[] {
+export function getRecordsByDateRange(userId: string, startDate: string, endDate: string): any[] {
   const d = getDb();
-  return d.prepare('SELECT * FROM checkin_records WHERE record_date >= ? AND record_date <= ? ORDER BY record_date DESC').all(startDate, endDate);
+  return d.prepare('SELECT * FROM checkin_records WHERE user_id = ? AND record_date >= ? AND record_date <= ? ORDER BY record_date DESC').all(userId, startDate, endDate);
 }
 
-export function getRecordByDate(date: string) {
+export function getRecordByDate(userId: string, date: string) {
   const d = getDb();
-  return d.prepare('SELECT * FROM checkin_records WHERE record_date = ?').get(date) as any;
+  return d.prepare('SELECT * FROM checkin_records WHERE user_id = ? AND record_date = ?').get(userId, date) as any;
 }
 
-export function getRecentRecords(days: number): any[] {
+export function getRecentRecords(userId: string, days: number): any[] {
   const d = getDb();
   const since = new Date();
   since.setDate(since.getDate() - days);
   const sinceStr = since.toISOString().split('T')[0];
-  return d.prepare('SELECT * FROM checkin_records WHERE record_date >= ? ORDER BY record_date DESC').all(sinceStr);
+  return d.prepare('SELECT * FROM checkin_records WHERE user_id = ? AND record_date >= ? ORDER BY record_date DESC').all(userId, sinceStr);
 }
 
-export function upsertRecord(record: { id: string; user_id?: string; record_date: string; weight: number; waist: number; note?: string }): any {
+export function upsertRecord(record: { id: string; user_id: string; record_date: string; weight: number; waist: number; note?: string }): any {
   const d = getDb();
-  const existing = d.prepare('SELECT * FROM checkin_records WHERE record_date = ?').get(record.record_date) as any;
+  const existing = d.prepare('SELECT * FROM checkin_records WHERE record_date = ? AND user_id = ?').get(record.record_date, record.user_id) as any;
   if (existing) {
-    d.prepare(`UPDATE checkin_records SET weight = @weight, waist = @waist, note = @note WHERE record_date = @record_date`)
-      .run({ weight: record.weight, waist: record.waist, note: record.note || '', record_date: record.record_date });
+    d.prepare(`UPDATE checkin_records SET weight = @weight, waist = @waist, note = @note WHERE record_date = @record_date AND user_id = @user_id`)
+      .run({ weight: record.weight, waist: record.waist, note: record.note || '', record_date: record.record_date, user_id: record.user_id });
   } else {
     d.prepare(`INSERT INTO checkin_records (id, user_id, record_date, weight, waist, note) VALUES (@id, @user_id, @record_date, @weight, @waist, @note)`)
-      .run({ id: record.id, user_id: record.user_id || '1', record_date: record.record_date, weight: record.weight, waist: record.waist, note: record.note || '' });
+      .run({ id: record.id, user_id: record.user_id, record_date: record.record_date, weight: record.weight, waist: record.waist, note: record.note || '' });
   }
-  return d.prepare('SELECT * FROM checkin_records WHERE record_date = ?').get(record.record_date) as any;
+  return d.prepare('SELECT * FROM checkin_records WHERE record_date = ? AND user_id = ?').get(record.record_date, record.user_id) as any;
 }
 
-export function getLatestRecord() {
+export function getLatestRecord(userId: string) {
   const d = getDb();
   const today = new Date().toISOString().split('T')[0];
-  return d.prepare('SELECT * FROM checkin_records WHERE record_date <= ? ORDER BY record_date DESC LIMIT 1').get(today) as any;
+  return d.prepare('SELECT * FROM checkin_records WHERE user_id = ? AND record_date <= ? ORDER BY record_date DESC LIMIT 1').get(userId, today) as any;
 }
 
-export function getRecordStats(days: number = 90) {
+export function getRecordStats(userId: string, days: number = 90) {
   const d = getDb();
   const since = new Date();
   since.setDate(since.getDate() - days);
   const sinceStr = since.toISOString().split('T')[0];
   const todayStr2 = new Date().toISOString().split('T')[0];
-  const records = d.prepare('SELECT * FROM checkin_records WHERE record_date >= ? AND record_date <= ? ORDER BY record_date ASC').all(sinceStr, todayStr2) as any[];
+  const records = d.prepare('SELECT * FROM checkin_records WHERE user_id = ? AND record_date >= ? AND record_date <= ? ORDER BY record_date ASC').all(userId, sinceStr, todayStr2) as any[];
   if (records.length === 0) return null;
 
   const weights = records.map((r: any) => r.weight);
@@ -187,32 +195,32 @@ export function getRecordStats(days: number = 90) {
 
 // ======== Notification operations ========
 
-export function getNotifications(): any[] {
+export function getNotifications(userId: string): any[] {
   const d = getDb();
-  return d.prepare('SELECT * FROM notifications ORDER BY created_at DESC LIMIT 50').all();
+  return d.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50').all(userId);
 }
 
-export function getUnreadCount(): number {
+export function getUnreadCount(userId: string): number {
   const d = getDb();
-  const row = d.prepare('SELECT COUNT(*) as count FROM notifications WHERE is_read = 0').get() as any;
+  const row = d.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').get(userId) as any;
   return row?.count || 0;
 }
 
-export function addNotification(title: string, content: string): any {
+export function addNotification(userId: string, title: string, content: string): any {
   const d = getDb();
   const id = 'n' + Date.now() + Math.random().toString(36).slice(2, 8);
-  d.prepare('INSERT INTO notifications (id, title, content) VALUES (?, ?, ?)').run(id, title, content);
+  d.prepare('INSERT INTO notifications (id, user_id, title, content) VALUES (?, ?, ?, ?)').run(id, userId, title, content);
   return d.prepare('SELECT * FROM notifications WHERE id = ?').get(id);
 }
 
-export function markNotificationRead(id: string): void {
+export function markNotificationRead(userId: string, id: string): void {
   const d = getDb();
-  d.prepare('UPDATE notifications SET is_read = 1 WHERE id = ?').run(id);
+  d.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?').run(id, userId);
 }
 
-export function markAllNotificationsRead(): void {
+export function markAllNotificationsRead(userId: string): void {
   const d = getDb();
-  d.prepare('UPDATE notifications SET is_read = 1 WHERE is_read = 0').run();
+  d.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0').run(userId);
 }
 
-export default { getDb, getUser, updateUser, getAllRecords, getRecordsByDateRange, getRecordByDate, getRecentRecords, upsertRecord, getLatestRecord, getRecordStats, getNotifications, getUnreadCount, addNotification, markNotificationRead, markAllNotificationsRead };
+export default { getDb, getUser, getUserByPhone, createUser, updateUser, getAllRecords, getRecordsByDateRange, getRecordByDate, getRecentRecords, upsertRecord, getLatestRecord, getRecordStats, getNotifications, getUnreadCount, addNotification, markNotificationRead, markAllNotificationsRead };

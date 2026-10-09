@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import { getSupabaseClient } from "./storage/database/supabase-client";
 import * as localDb from "./storage/database/local-db";
+import { requireAuth } from "./auth/middleware";
+import { authRouter } from "./auth/routes";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -16,71 +18,14 @@ let supabase: any = null;
 try {
   supabase = getSupabaseClient();
 } catch (e: any) {
-  console.log('Supabase not available, using in-memory storage:', e.message);
+  console.log('Supabase not available, using SQLite only:', e.message);
 }
 
-// In-memory data storage (for demo purposes)
-interface User {
-  id: string;
-  nickname: string;
-  signature: string;
-  gender: string;
-  birth_date: string;
-  height: number;
-  target_weight: number;
-  target_waist: number;
-  avatar_url: string | null;
-  created_at: string;
-}
-
-interface Record {
-  id: string;
-  user_id: string;
-  record_date: string;
-  weight: number;
-  waist: number;
-  note: string;
-  created_at: string;
-}
-
-// Demo user data
-let users: User[] = [
-  {
-    id: '1',
-    nickname: '两点丘',
-    signature: '每天进步一点点',
-    gender: 'male',
-    birth_date: '1975-11-03',
-    height: 179,
-    target_weight: 70,
-    target_waist: 80,
-    avatar_url: null,
-    created_at: '2024-01-01',
-  },
-];
-
-// Demo records data
-let records: Record[] = [
-  { id: '1', user_id: '1', record_date: '2024-01-01', weight: 78, waist: 88, note: '开始减重计划', created_at: '2024-01-01' },
-  { id: '2', user_id: '1', record_date: '2024-01-02', weight: 77.5, waist: 87.5, note: '', created_at: '2024-01-02' },
-  { id: '3', user_id: '1', record_date: '2024-01-03', weight: 77.2, waist: 87, note: '控制饮食', created_at: '2024-01-03' },
-  { id: '4', user_id: '1', record_date: '2024-01-04', weight: 76.8, waist: 86.5, note: '', created_at: '2024-01-04' },
-  { id: '5', user_id: '1', record_date: '2024-01-05', weight: 76.5, waist: 86, note: '坚持运动', created_at: '2024-01-05' },
-  { id: '6', user_id: '1', record_date: '2024-01-06', weight: 76.2, waist: 85.5, note: '', created_at: '2024-01-06' },
-  { id: '7', user_id: '1', record_date: '2024-01-07', weight: 76, waist: 85, note: '周末坚持', created_at: '2024-01-07' },
-];
+app.use('/api/v1/auth', authRouter);
 
 // Generate ID
 function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
-
-// 获取内存中最新记录（按日期降序）
-function getLatestMemoryRecord(): Record | undefined {
-  if (records.length === 0) return undefined;
-  return [...records].sort((a, b) =>
-    new Date(b.record_date).getTime() - new Date(a.record_date).getTime()
-  )[0];
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 }
 
 // 正确的年龄计算（检查生日是否已过）
@@ -104,14 +49,14 @@ app.get('/api/v1/health', (req, res) => {
 // ==================== User API ====================
 
 // Get user info
-app.get('/api/v1/user/info', (req, res) => {
-  const user = localDb.getUser('1') || users[0];
+app.get('/api/v1/user/info', requireAuth, (req, res) => {
+  const user = localDb.getUser(req.userId!);
   if (!user) {
     return res.status(404).json({ code: 404, msg: 'User not found' });
   }
 
   // Get latest record for current metrics
-  const latestRecord = localDb.getLatestRecord() || getLatestMemoryRecord();
+  const latestRecord = localDb.getLatestRecord(req.userId!);
 
   // Calculate BMI
   let bmi = 0;
@@ -172,8 +117,8 @@ app.get('/api/v1/user/info', (req, res) => {
 });
 
 // Update user info
-app.put('/api/v1/user/update', (req, res) => {
-  const { nickname, signature, gender, birth_date, height, target_weight, target_waist, reminder_time, avatar_url } = req.body;
+app.put('/api/v1/user/update', requireAuth, (req, res) => {
+  const { nickname, signature, gender, birth_date, height, target_weight, target_waist, reminder_time, avatar_url, onboarded } = req.body;
   const fields: Record<string, any> = {};
   if (nickname !== undefined) fields.nickname = nickname;
   if (signature !== undefined) fields.signature = signature;
@@ -184,191 +129,79 @@ app.put('/api/v1/user/update', (req, res) => {
   if (target_waist !== undefined) fields.target_waist = target_waist;
   if (reminder_time !== undefined) fields.reminder_time = reminder_time;
   if (avatar_url !== undefined) fields.avatar_url = avatar_url;
-  const user = localDb.updateUser('1', fields);
-  // Also update in-memory
-  const memUser = users[0];
-  if (memUser) Object.assign(memUser, fields);
-  res.json({ code: 200, msg: 'Update success', data: user || memUser });
+  if (onboarded !== undefined) fields.onboarded = onboarded;
+  const user = localDb.updateUser(req.userId!, fields);
+  res.json({ code: 200, msg: 'Update success', data: user });
 });
 
 // Update target
-app.put('/api/v1/user/target', (req, res) => {
+app.put('/api/v1/user/target', requireAuth, (req, res) => {
   const { target_weight, target_waist } = req.body;
   const fields: Record<string, any> = {};
   if (target_weight) fields.target_weight = target_weight;
   if (target_waist) fields.target_waist = target_waist;
-  const user = localDb.updateUser('1', fields);
-  const memUser = users[0];
-  if (memUser) Object.assign(memUser, fields);
-  res.json({ code: 200, msg: 'Target updated', data: user || memUser });
+  const user = localDb.updateUser(req.userId!, fields);
+  res.json({ code: 200, msg: 'Target updated', data: user });
 });
 
 // ==================== Records API ====================
 
 // Get record by date
-app.get('/api/v1/records/date/:date', async (req, res) => {
-  const { date } = req.params;
-  // Try local DB first
-  const localRecord = localDb.getRecordByDate(date);
+app.get('/api/v1/records/date/:date', requireAuth, (req, res) => {
+  const date = req.params.date as string;
+  const localRecord = localDb.getRecordByDate(req.userId!, date);
   if (localRecord) {
     return res.json({ code: 200, data: {
       id: localRecord.id, record_date: localRecord.record_date,
       weight: localRecord.weight, waist: localRecord.waist, note: localRecord.note || '',
     }});
   }
-  // Try Supabase
-  try {
-    const { data } = await supabase.from('checkin_records').select('*').eq('checkin_date', date).maybeSingle();
-    if (data) {
-      return res.json({ code: 200, data: {
-        id: data.id.toString(), record_date: data.checkin_date,
-        weight: parseFloat(data.weight) || 0, waist: parseFloat(data.waist_circumference) || 0, note: data.note || '',
-      }});
-    }
-  } catch (_e) { /* ignore */ }
-  // Fallback to memory
-  const memRecord = records.find(r => r.record_date === date);
-  res.json({ code: 200, data: memRecord || null });
+  res.json({ code: 200, data: null });
 });
 
 // Get recent records (从数据库读取)
-app.get('/api/v1/records/recent', async (req, res) => {
+app.get('/api/v1/records/recent', requireAuth, (req, res) => {
   const days = parseInt(req.query.days as string) || 7;
-  const now = new Date();
-  const reqStartDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-  const startDateStr = reqStartDate.toISOString().split('T')[0];
-
-  // 1. Local DB
-  try {
-    const localRecords = localDb.getRecentRecords(days);
-    if (localRecords.length > 0) {
-      return res.json({ code: 200, data: localRecords.map((r: any) => ({
-        id: r.id, record_date: r.record_date, weight: r.weight, waist: r.waist, note: r.note || '',
-      })) });
-    }
-  } catch (e: any) { console.log('LocalDB recent failed:', e.message); }
-
-  // 2. Supabase
-  try {
-    const { data } = await supabase.from('checkin_records').select('*').gte('checkin_date', startDateStr).order('checkin_date', { ascending: false });
-    if (data?.length > 0) {
-      return res.json({ code: 200, data: (data || []).map((r: any) => ({
-        id: r.id.toString(), record_date: r.checkin_date,
-        weight: parseFloat(r.weight) || 0, waist: parseFloat(r.waist_circumference) || 0, note: r.note || '',
-      })) });
-    }
-  } catch (e: any) { console.log('Supabase recent failed:', e.message); }
-
-  // 3. Memory fallback
-  const recentRecords = records
-    .filter((r) => new Date(r.record_date) >= reqStartDate)
-    .sort((a, b) => new Date(b.record_date).getTime() - new Date(a.record_date).getTime());
-  res.json({ code: 200, data: recentRecords });
+  const localRecords = localDb.getRecentRecords(req.userId!, days);
+  res.json({ code: 200, data: localRecords.map((r: any) => ({
+    id: r.id, record_date: r.record_date, weight: r.weight, waist: r.waist, note: r.note || '',
+  })) });
 });
 
 // Get records by date range
-app.get('/api/v1/records/history', async (req, res) => {
+app.get('/api/v1/records/history', requireAuth, (req, res) => {
   const { startDate, endDate } = req.query;
   const now = new Date();
   const start = (startDate as string) || new Date(now.getFullYear() - 10, 0, 1).toISOString().split('T')[0];
   const end = (endDate as string) || now.toISOString().split('T')[0];
 
-  // 1. Local DB
-  try {
-    const localRecords = localDb.getRecordsByDateRange(start, end);
-    if (localRecords.length > 0) {
-      return res.json({ code: 200, data: localRecords.map((r: any) => ({
-        id: r.id, record_date: r.record_date, weight: r.weight, waist: r.waist, note: r.note || '',
-      })) });
-    }
-  } catch (e: any) { console.log('LocalDB history failed:', e.message); }
-
-  // 2. Supabase
-  try {
-    let query = supabase.from('checkin_records').select('*').order('checkin_date', { ascending: false });
-    if (startDate) query = query.gte('checkin_date', startDate as string);
-    if (endDate) query = query.lte('checkin_date', endDate as string);
-    const { data } = await query;
-    if (data?.length > 0) {
-      return res.json({ code: 200, data: (data || []).map((r: any) => ({
-        id: r.id.toString(), record_date: r.checkin_date,
-        weight: parseFloat(r.weight) || 0, waist: parseFloat(r.waist_circumference) || 0, note: r.note || '',
-      })) });
-    }
-  } catch (e: any) { console.log('Supabase history failed:', e.message); }
-
-  // 3. Memory fallback
-  const memoryRecords = records
-    .filter(r => r.record_date >= start && r.record_date <= end)
-    .sort((a, b) => new Date(b.record_date).getTime() - new Date(a.record_date).getTime());
-  res.json({ code: 200, data: memoryRecords });
+  const localRecords = localDb.getRecordsByDateRange(req.userId!, start, end);
+  res.json({ code: 200, data: localRecords.map((r: any) => ({
+    id: r.id, record_date: r.record_date, weight: r.weight, waist: r.waist, note: r.note || '',
+  })) });
 });
 
 // Create or update record
-app.post('/api/v1/records', async (req, res) => {
+app.post('/api/v1/records', requireAuth, (req, res) => {
   const { record_date, weight, waist, note } = req.body;
-  let result: any = null;
   const recordId = generateId();
 
-  // 1. 写入本地 SQLite 数据库（主存储）
-  try {
-    result = localDb.upsertRecord({
-      id: recordId,
-      user_id: '1',
-      record_date,
-      weight: weight || 0,
-      waist: waist || 0,
-      note: note || '',
-    });
-    console.log('LocalDB write success:', record_date);
-  } catch (dbErr: any) {
-    console.log('LocalDB write failed:', dbErr.message);
-  }
+  const result = localDb.upsertRecord({
+    id: recordId,
+    user_id: req.userId!,
+    record_date,
+    weight: weight || 0,
+    waist: waist || 0,
+    note: note || '',
+  });
 
-  // 2. 尝试 Supabase 写入
-  try {
-    const { data: existingRecords, error: queryError } = await supabase
-      .from('checkin_records')
-      .select('*')
-      .eq('checkin_date', record_date)
-      .maybeSingle();
-    if (!queryError) {
-      if (existingRecords) {
-        await supabase.from('checkin_records').update({
-          weight: weight?.toString() || null,
-          waist_circumference: waist?.toString() || null,
-          note: note || '',
-        }).eq('id', existingRecords.id);
-      } else {
-        await supabase.from('checkin_records').insert({
-          checkin_date: record_date,
-          weight: weight?.toString() || null,
-          waist_circumference: waist?.toString() || null,
-          note: note || '',
-        });
-      }
-    }
-  } catch (dbErr: any) {
-    console.log('Supabase write failed:', dbErr.message);
-  }
-
-  // 3. 始终更新内存数组（保底存储）
-  const existingIndex = records.findIndex((r) => r.record_date === record_date);
-  const isUpdate = existingIndex >= 0;
-  if (isUpdate) {
-    records[existingIndex] = { ...records[existingIndex], weight, waist: waist || 0, note: note || '' };
-  } else {
-    records.push({ id: recordId, user_id: '1', record_date, weight, waist: waist || 0, note: note || '', created_at: new Date().toISOString().split('T')[0] });
-  }
-
-  // 4. 返回成功响应
   res.json({
     code: 200,
-    msg: isUpdate ? 'Record updated' : 'Record created',
+    msg: 'Record saved',
     data: {
-      id: result?.id?.toString() || records.find(r => r.record_date === record_date)?.id || generateId(),
+      id: result?.id?.toString() || recordId,
       record_date,
-      weight,
+      weight: weight || 0,
       waist: waist || 0,
       note: note || '',
     },
@@ -376,16 +209,9 @@ app.post('/api/v1/records', async (req, res) => {
 });
 
 // Get records statistics
-app.get('/api/v1/records/stats', (req, res) => {
-  // 从本地数据库读取所有记录（仅到今天为止）
-  const todayStr = new Date().toISOString().split('T')[0];
-  let allRecords = localDb.getAllRecords().filter((r: any) => r.record_date <= todayStr);
-  // 如果本地数据库为空，回退到内存（同样过滤未来日期）
-  if (allRecords.length === 0) {
-    allRecords = [...records]
-      .filter((r: any) => r.record_date <= todayStr)
-      .sort((a, b) => new Date(b.record_date).getTime() - new Date(a.record_date).getTime());
-  }
+app.get('/api/v1/records/stats', requireAuth, (req, res) => {
+  // 从本地数据库读取当前用户的记录（仅到今天为止）
+  const allRecords = localDb.getAllRecords(req.userId!);
 
   if (allRecords.length === 0) {
     return res.json({
@@ -438,64 +264,21 @@ app.get('/api/v1/records/stats', (req, res) => {
 });
 
 // Export records (从数据库读取)
-app.get('/api/v1/records/export', async (req, res) => {
-  // 优先从本地数据库读取
-  try {
-    const localRecords = localDb.getAllRecords();
-    if (localRecords.length > 0) {
-      return res.json({ code: 200, data: localRecords.map((r: any) => ({
-        id: r.id, record_date: r.record_date, weight: r.weight, waist: r.waist, note: r.note || '',
-      })).sort((a: any, b: any) => new Date(a.record_date).getTime() - new Date(b.record_date).getTime()) });
-    }
-  } catch (_e) {}
-
-  // 尝试 Supabase
-  try {
-    const { data } = await supabase.from('checkin_records').select('*').order('checkin_date', { ascending: true });
-    if (data?.length > 0) {
-      return res.json({ code: 200, data: (data || []).map((r: any) => ({
-        id: r.id.toString(), record_date: r.checkin_date,
-        weight: parseFloat(r.weight) || 0, waist: parseFloat(r.waist_circumference) || 0, note: r.note || '',
-      })) });
-    }
-  } catch (_e) {}
-
-  // 回退到内存
-  const sortedRecords = [...records].sort(
-    (a, b) => new Date(a.record_date).getTime() - new Date(b.record_date).getTime()
-  );
-  res.json({ code: 200, data: sortedRecords });
+app.get('/api/v1/records/export', requireAuth, (req, res) => {
+  const localRecords = localDb.getAllRecords(req.userId!);
+  res.json({ code: 200, data: localRecords.map((r: any) => ({
+    id: r.id, record_date: r.record_date, weight: r.weight, waist: r.waist, note: r.note || '',
+  })).sort((a: any, b: any) => new Date(a.record_date).getTime() - new Date(b.record_date).getTime()) });
 });
 
 // ==================== Health API ====================
 
 // Get health metrics (从数据库读取最新数据)
-app.get('/api/v1/health/metrics', async (req, res) => {
+app.get('/api/v1/health/metrics', requireAuth, (req, res) => {
   try {
     // 从本地数据库获取用户和最新记录
-    let user = localDb.getUser('1') || users[0];
-    const localLatestRecord = localDb.getLatestRecord();
-    let latestRecord = localLatestRecord;
-
-    // 如果本地数据库没有记录，尝试 Supabase
-    if (!latestRecord) {
-      try {
-        const result = await supabase.from('checkin_records').select('*').order('checkin_date', { ascending: false }).limit(1);
-        if (!result.error && result.data?.[0]) {
-          const r = result.data[0];
-          latestRecord = { weight: parseFloat(r.weight) || 0, waist: parseFloat(r.waist_circumference) || 0, record_date: r.checkin_date };
-        }
-      } catch (_e) { console.log('Supabase records query failed'); }
-    }
-
-    // 如果还没有记录，回退到内存
-    if (!latestRecord) {
-      latestRecord = getLatestMemoryRecord();
-    }
-
-    if (!user) {
-      user = { height: 170, gender: 'male', birth_date: '1990-01-01', target_weight: 70 } as any;
-    }
+    const user = localDb.getUser(req.userId!) || { height: 170, gender: 'male', birth_date: '1990-01-01', target_weight: 70 };
+    const latestRecord = localDb.getLatestRecord(req.userId!);
 
   // 基本参数
   const currentWeight = latestRecord?.weight || user.target_weight || 70;
@@ -726,26 +509,15 @@ app.get('/api/v1/health/metrics', async (req, res) => {
 });
 
 // Get health trend
-app.get('/api/v1/health/trend', (req, res) => {
+app.get('/api/v1/health/trend', requireAuth, (req, res) => {
   const days = parseInt(req.query.days as string) || 7;
   const now = new Date();
   const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
   const startDateStr = startDate.toISOString().split('T')[0];
   const endDateStr = now.toISOString().split('T')[0];
 
-  // 优先从本地数据库读取
-  let trendRecords: any[] = [];
-  try {
-    trendRecords = localDb.getRecordsByDateRange(startDateStr, endDateStr)
-      .sort((a: any, b: any) => new Date(a.record_date).getTime() - new Date(b.record_date).getTime());
-  } catch (_e) { /* ignore */ }
-
-  // 如果本地数据库为空，回退到内存
-  if (trendRecords.length === 0) {
-    trendRecords = records
-      .filter((r) => new Date(r.record_date) >= startDate)
-      .sort((a, b) => new Date(a.record_date).getTime() - new Date(b.record_date).getTime());
-  }
+  const trendRecords = localDb.getRecordsByDateRange(req.userId!, startDateStr, endDateStr)
+    .sort((a: any, b: any) => new Date(a.record_date).getTime() - new Date(b.record_date).getTime());
 
   const weightTrend = trendRecords.map((r) => ({
     date: r.record_date,
@@ -792,28 +564,13 @@ app.get('/api/v1/health/trend', (req, res) => {
 });
 
 // Calculate weight loss plan - 基于文档公式
-app.post('/api/v1/health/weight-plan', async (req, res) => {
+app.post('/api/v1/health/weight-plan', requireAuth, (req, res) => {
   try {
     const { weeklyGoal, activityLevel } = req.body;
 
-    // 从本地数据库/内存获取用户信息和最新记录
-    let user = localDb.getUser('1') || users[0];
-    const localLatest = localDb.getLatestRecord();
-    let latestRecord = localLatest || getLatestMemoryRecord();
-    // 尝试 Supabase 补充
-    try {
-      const { data: dbUsers } = await supabase.from('users').select('*').limit(1);
-      if (dbUsers?.[0]) {
-        const dbUser = dbUsers[0];
-        user = { ...user, height: dbUser.height || 170, gender: dbUser.gender || 'male', birth_date: dbUser.birth_date || '1990-01-01', target_weight: dbUser.target_weight || 70 };
-      }
-    } catch {}
-    try {
-      const { data: dbRecords } = await supabase.from('checkin_records').select('*').order('checkin_date', { ascending: false }).limit(1);
-      if (dbRecords?.[0] && !latestRecord) {
-        latestRecord = { id: String(dbRecords[0].id), user_id: String(dbRecords[0].user_id), record_date: dbRecords[0].checkin_date, weight: parseFloat(dbRecords[0].weight) || 0, waist: parseFloat(dbRecords[0].waist_circumference) || 0, note: dbRecords[0].note || '', created_at: dbRecords[0].created_at || '' };
-      }
-    } catch {}
+    // 从本地数据库获取用户信息和最新记录
+    const user = localDb.getUser(req.userId!) || { height: 170, gender: 'male', birth_date: '1990-01-01', target_weight: 70 };
+    const latestRecord = localDb.getLatestRecord(req.userId!);
 
     // 基础数据（当前体重 = 最新打卡记录的体重）
     const currentWeight = latestRecord?.weight || user.target_weight || 70; // kg
@@ -1103,11 +860,10 @@ app.post('/api/v1/health/weight-plan', async (req, res) => {
 });
 
 // Get detailed stats
-app.get('/api/v1/health/stats', (req, res) => {
-  const user = users[0];
-  const sortedRecords = [...records].sort(
-    (a, b) => new Date(a.record_date).getTime() - new Date(b.record_date).getTime()
-  );
+app.get('/api/v1/health/stats', requireAuth, (req, res) => {
+  const user = localDb.getUser(req.userId!) || { gender: 'male', height: 170, birth_date: '1990-01-01' };
+  const sortedRecords = localDb.getAllRecords(req.userId!)
+    .sort((a: any, b: any) => new Date(a.record_date).getTime() - new Date(b.record_date).getTime());
 
   if (sortedRecords.length === 0) {
     return res.json({ code: 200, data: null });
@@ -1238,78 +994,48 @@ app.get('/api/v1/health/stats', (req, res) => {
 });
 
 // Feedback
-app.post('/api/v1/user/feedback', (req, res) => {
+app.post('/api/v1/user/feedback', requireAuth, (req, res) => {
   const { content, contact } = req.body;
-  console.log('Feedback received:', { content, contact });
+  console.log('Feedback received:', { userId: req.userId, content, contact });
   res.json({ code: 200, msg: 'Feedback submitted successfully' });
 });
 
 // Notifications API
-app.get('/api/v1/notifications', (req, res) => {
+app.get('/api/v1/notifications', requireAuth, (req, res) => {
   try {
-    const notifications = localDb.getNotifications();
+    const notifications = localDb.getNotifications(req.userId!);
     res.json({ code: 200, data: notifications });
   } catch (e: any) {
     res.json({ code: 200, data: [] });
   }
 });
 
-app.get('/api/v1/notifications/unread-count', (req, res) => {
+app.get('/api/v1/notifications/unread-count', requireAuth, (req, res) => {
   try {
-    const count = localDb.getUnreadCount();
+    const count = localDb.getUnreadCount(req.userId!);
     res.json({ code: 200, data: { count } });
   } catch (e: any) {
     res.json({ code: 200, data: { count: 0 } });
   }
 });
 
-app.put('/api/v1/notifications/:id/read', (req, res) => {
+app.put('/api/v1/notifications/:id/read', requireAuth, (req, res) => {
   try {
-    localDb.markNotificationRead(req.params.id);
+    localDb.markNotificationRead(req.userId!, req.params.id as string);
     res.json({ code: 200, msg: 'ok' });
   } catch (e: any) {
     res.json({ code: 200, msg: 'ok' });
   }
 });
 
-app.put('/api/v1/notifications/read-all', (req, res) => {
+app.put('/api/v1/notifications/read-all', requireAuth, (req, res) => {
   try {
-    localDb.markAllNotificationsRead();
+    localDb.markAllNotificationsRead(req.userId!);
     res.json({ code: 200, msg: 'ok' });
   } catch (e: any) {
     res.json({ code: 200, msg: 'ok' });
   }
 });
-
-// Seed demo records into local DB if empty
-try {
-  const existingRecords = localDb.getAllRecords();
-  if (existingRecords.length === 0) {
-    const demoRecords = [
-      { date: '2024-01-01', weight: 78, waist: 88 },
-      { date: '2024-01-02', weight: 77.5, waist: 87.5 },
-      { date: '2024-01-03', weight: 77.2, waist: 87 },
-      { date: '2024-01-04', weight: 76.8, waist: 86.5 },
-      { date: '2024-01-05', weight: 76.5, waist: 86 },
-      { date: '2024-01-06', weight: 76.2, waist: 85.5 },
-      { date: '2024-01-07', weight: 76, waist: 85 },
-    ];
-    demoRecords.forEach(r => {
-      localDb.upsertRecord({ id: generateId(), user_id: '1', record_date: r.date, weight: r.weight, waist: r.waist, note: '' });
-    });
-    console.log('LocalDB: Seeded 7 demo records');
-  }
-  // Seed demo notifications if none exist
-  const existingNotifs = localDb.getNotifications();
-  if (existingNotifs.length === 0) {
-    localDb.addNotification('打卡提醒', '坚持打卡，记录今天的体重和腰围数据吧！');
-    localDb.addNotification('健康小贴士', '每天饮水2000ml以上，有助于新陈代谢和体重管理。');
-    localDb.addNotification('每周总结', '本周体重下降0.5kg，继续保持良好的运动和饮食习惯！');
-    console.log('LocalDB: Seeded 3 demo notifications');
-  }
-} catch (e: any) {
-  console.log('LocalDB seed skipped:', e.message);
-}
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}/`);

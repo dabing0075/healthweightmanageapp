@@ -12,6 +12,7 @@ import { useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { apiFetch } from '@/utils/api';
 
 interface UserProfile {
   id: string;
@@ -41,19 +42,17 @@ export default function ProfilePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [cacheSize] = useState('12.5 MB');
 
-  const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
-
   const fetchProfile = async () => {
     try {
       // 使用 Promise.allSettled 确保即使一个请求失败，另一个也能正常工作
       const [profileRes, statsRes] = await Promise.allSettled([
-        fetch(`${API_BASE}/api/v1/user/info`),
-        fetch(`${API_BASE}/api/v1/records/stats`),
+        apiFetch('/api/v1/user/info'),
+        apiFetch('/api/v1/records/stats'),
       ]);
 
       // 处理用户信息
       if (profileRes.status === 'fulfilled') {
-        const profileData = await profileRes.value.json();
+        const profileData = profileRes.value;
         if (profileData.code === 200 && profileData.data) {
           const user = profileData.data;
           
@@ -89,7 +88,7 @@ export default function ProfilePage() {
 
       // 处理统计数据
       if (statsRes.status === 'fulfilled') {
-        const statsData = await statsRes.value.json();
+        const statsData = statsRes.value;
         if (statsData.code === 200 && statsData.data) {
           setStats({
             totalDays: statsData.data.totalRecords || 0,
